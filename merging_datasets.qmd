@@ -1,0 +1,35 @@
+---
+title: "Untitled"
+format: html
+---
+
+
+```{r}
+library(dplyr)
+library(haven)
+library(sf)
+library(dbplyr)
+library(ggplot2)
+library(tidyverse)
+
+# Getting people data
+
+Personas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/PERSONA.sav")
+
+# Only observations from people who lived in Chile in 1987
+
+Comunas_Censo_1987 <-Personas_Censo1992 %>%
+  filter(Comuna_1987_Origen3 >= 1101 & Comuna_1987_Origen3 <= 13605,
+         Comuna_1987_Origen3 %% 100 != 0)
+
+# Comuna codes from 1992 census 
+
+Comunas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/COMUNAS.sav")
+
+# Votes data 
+
+Dataverse <- read_dta("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/FinalDatasetForReplication.dta")
+
+colnames(Dataverse)
+
+```
