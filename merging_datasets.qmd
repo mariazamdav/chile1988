@@ -7,10 +7,8 @@ format: html
 ```{r}
 library(dplyr)
 library(haven)
-library(sf)
-library(dbplyr)
-library(ggplot2)
-library(tidyverse)
+library(foreign)
+library(estimatr)
 
 # Getting people data
 
@@ -18,7 +16,7 @@ Personas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile19
 
 # Only observations from people who lived in Chile in 1987
 
-Comunas_Censo_1987 <-Personas_Censo1992 %>%
+Comunas_Censo_1987 <-Personas_Censo_1992 %>%
   filter(Comuna_1987_Origen3 >= 1101 & Comuna_1987_Origen3 <= 13605,
          Comuna_1987_Origen3 %% 100 != 0)
 
@@ -30,8 +28,43 @@ Comunas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile198
 
 Dataverse <- read_dta("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/FinalDatasetForReplication.dta")
 
+head(Dataverse)
+View(Dataverse)
+
+# Read just the attribute table — no geometry needed
+comunas <- st_read("C:/Users/mlzam/OneDrive/Documents/Files/MIT/spring 26/quant 2/chile1988/dataverse_files (3)/Paper Replication/Data/Map/cl_comunas_geo/Paper Replication/Data/Map/cl_comunas_geo.shp")
+
+# Look at the ID + name columns specifically
+comunas |> select(contains("ID"), contains("NOM"), contains("COM")) |> head(20)
+
+
+
+# See all column names in your replication dataset
+
+model1<-lm_robust(VoteShareNo ~ Bureaucrat + Military + shVictims_70 + lnDistStgo, data = Dataverse)
+summary(model1)
+
 colnames(Dataverse)
 
-hello 
+library(sf)
+library(dplyr)
 
+# Read the shapefile
+comunas_sf <- comunas |> st_drop_geometry()
+
+# The sequential ID is likely just the row number
+# Create it explicitly
+crosswalk <- comunas_sf |>
+  mutate(seq_id = row_number()) |>
+  select(seq_id, ID_2002, NOMBRE)
+
+head(crosswalk, 20)
+
+# See what the comuna ID column is called and its values
+Dataverse |> 
+  select(1:5) |>  # adjust if needed
+  head(10)
+
+# Check the range of the ID
+range(Dataverse$id)  # replace 'id' with the actual column name
 ```
