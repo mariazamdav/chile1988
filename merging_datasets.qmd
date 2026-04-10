@@ -9,10 +9,18 @@ library(dplyr)
 library(haven)
 library(foreign)
 library(estimatr)
+library(sf)
+library(dplyr)
 
 # Getting people data
 
 Personas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/PERSONA.sav")
+
+colnames(Personas_Censo_1992)
+
+sum(is.na(Personas_Censo_1992$Quintil_por_puntaje))
+table(Personas_Censo_1992$Quintil_por_puntaje, useNA = "always")
+
 
 # Only observations from people who lived in Chile in 1987
 
@@ -20,34 +28,39 @@ Comunas_Censo_1987 <-Personas_Censo_1992 %>%
   filter(Comuna_1987_Origen3 >= 1101 & Comuna_1987_Origen3 <= 13605,
          Comuna_1987_Origen3 %% 100 != 0)
 
+
+View(Comunas_Censo_1987)
 # Comuna codes from 1992 census 
 
 Comunas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/COMUNAS.sav")
 
-# Votes data 
+colnames(Comunas_Censo_19)
+
+Comunas_Censo_1987 <- Comunas_Censo_1987 %>%
+  mutate(years_schooling = case_when(
+    Tipo_educacion == 0 ~ 0,
+    Tipo_educacion == 1 ~ 0,
+    Tipo_educacion == 2 ~ Curso,
+    Tipo_educacion %in% c(3,4,5,6,7,8,9,10) ~ 8 + Curso,
+    Tipo_educacion == 11 ~ 8 + Curso,
+    Tipo_educacion == 12 ~ 12 + Curso,
+    Tipo_educacion == 13 ~ 12 + Curso,
+    Tipo_educacion == 14 ~ 12 + Curso
+  ))
+
+
+summary(Comunas_Censo_1987$years_schooling)
+
+
+# Votes data
 
 Dataverse <- read_dta("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/FinalDatasetForReplication.dta")
 
-head(Dataverse)
-View(Dataverse)
+
+LB_Analysis <- read_dta("C:/Users/mlzam/OneDrive/Documents/Files/MIT/spring 26/quant 2/chile1988/dataverse_files (3)/Paper Replication/Data/LB_Analysis.dta")
 
 # Read just the attribute table — no geometry needed
 comunas <- st_read("C:/Users/mlzam/OneDrive/Documents/Files/MIT/spring 26/quant 2/chile1988/dataverse_files (3)/Paper Replication/Data/Map/cl_comunas_geo/Paper Replication/Data/Map/cl_comunas_geo.shp")
-
-# Look at the ID + name columns specifically
-comunas |> select(contains("ID"), contains("NOM"), contains("COM")) |> head(20)
-
-
-
-# See all column names in your replication dataset
-
-model1<-lm_robust(VoteShareNo ~ Bureaucrat + Military + shVictims_70 + lnDistStgo, data = Dataverse)
-summary(model1)
-
-colnames(Dataverse)
-
-library(sf)
-library(dplyr)
 
 # Read the shapefile
 comunas_sf <- comunas |> st_drop_geometry()
@@ -58,16 +71,68 @@ crosswalk <- comunas_sf |>
   mutate(seq_id = row_number()) |>
   select(seq_id, ID_2002, NOMBRE)
 
-head(crosswalk, 20)
+```
 
-# See what the comuna ID column is called and its values
-Dataverse |> 
-  select(1:5) |>  # adjust if needed
-  head(10)
 
-# Check the range of the ID
+```{r}
+Dataverse_sf <- Dataverse |>
+  st_as_sf(coords = c("longitud", "latitud"), crs = 4326)
 
-hello again 
+sf_use_s2(FALSE)
 
-range(Dataverse$id)  # replace 'id' with the actual column name
+comunas <- st_make_valid(comunas)
+
+# Spatial join
+crosswalk <- st_join(Dataverse_sf, comunas |> select(ID_2002, NOMBRE)) |>
+  st_drop_geometry() |>
+  select(comuna, ID_2002, NOMBRE)
+
+# Fix NAs manually, then drop unresolvable ones
+crosswalk <- crosswalk |>
+  mutate(
+    ID_2002 = case_when(
+      comuna == 53  ~ "1101",  # Iquique
+      comuna == 54  ~ "10209", # Quemchi
+      comuna == 93  ~ "10101", # Puerto Montt
+      comuna == 147 ~ "13403", # Calera de Tango
+      comuna == 175 ~ "2102",  # Mejillones
+      comuna == 184 ~ "11202", # Cisnes
+      comuna == 298 ~ "10210", # Quinchao
+      TRUE ~ ID_2002
+    ),
+    NOMBRE = case_when(
+      comuna == 53  ~ "Iquique",
+      comuna == 54  ~ "Quemchi",
+      comuna == 93  ~ "Puerto Montt",
+      comuna == 147 ~ "Calera de Tango",
+      comuna == 175 ~ "Mejillones",
+      comuna == 184 ~ "Cisnes",
+      comuna == 298 ~ "Quinchao",
+      TRUE ~ NOMBRE
+    )
+  ) |>
+  filter(!is.na(ID_2002))
+
+# Now merge into Dataverse
+Dataverse <- Dataverse |>
+  left_join(crosswalk, by = "comuna")
+
+# Should check that these comunas are actually in these regions, but we move 
+
+```
+
+
+```{r}
+# Get 10 random ID_2002 codes from shapefile
+sample_ids <- comunas |> st_drop_geometry() |> slice_sample(n = 10) |> pull(ID_2002)
+
+# Check those same codes in both datasets
+comunas |> st_drop_geometry() |> filter(ID_2002 %in% sample_ids) |> select(ID_2002, NOMBRE)
+
+Comunas_Censo_1992 |> filter(Codigo %in% sample_ids) |> select(Codigo, Nombre)
+```
+
+
+```{r}
+
 ```
