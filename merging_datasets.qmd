@@ -3,7 +3,6 @@ title: "Untitled"
 format: html
 ---
 
-
 ```{r}
 library(dplyr)
 library(haven)
@@ -11,16 +10,14 @@ library(foreign)
 library(estimatr)
 library(sf)
 library(dplyr)
+library(modelsummary)
+```
+
+```{r}
 
 # Getting people data
 
 Personas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/PERSONA.sav")
-
-colnames(Personas_Censo_1992)
-
-sum(is.na(Personas_Censo_1992$Quintil_por_puntaje))
-table(Personas_Censo_1992$Quintil_por_puntaje, useNA = "always")
-
 
 # Only observations from people who lived in Chile in 1987
 
@@ -28,35 +25,16 @@ Comunas_Censo_1987 <-Personas_Censo_1992 %>%
   filter(Comuna_1987_Origen3 >= 1101 & Comuna_1987_Origen3 <= 13605,
          Comuna_1987_Origen3 %% 100 != 0)
 
-
-View(Comunas_Censo_1987)
 # Comuna codes from 1992 census 
 
 Comunas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/COMUNAS.sav")
 
-colnames(Comunas_Censo_19)
-
-Comunas_Censo_1987 <- Comunas_Censo_1987 %>%
-  mutate(years_schooling = case_when(
-    Tipo_educacion == 0 ~ 0,
-    Tipo_educacion == 1 ~ 0,
-    Tipo_educacion == 2 ~ Curso,
-    Tipo_educacion %in% c(3,4,5,6,7,8,9,10) ~ 8 + Curso,
-    Tipo_educacion == 11 ~ 8 + Curso,
-    Tipo_educacion == 12 ~ 12 + Curso,
-    Tipo_educacion == 13 ~ 12 + Curso,
-    Tipo_educacion == 14 ~ 12 + Curso
-  ))
-
-
-summary(Comunas_Censo_1987$years_schooling)
-
+# Creating number of years of schooling measure 
+mean(Comunas_Censo_1987$Tipo_educacion %in% 12:14, na.rm = TRUE)
 
 # Votes data
 
 Dataverse <- read_dta("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/FinalDatasetForReplication.dta")
-
-
 LB_Analysis <- read_dta("C:/Users/mlzam/OneDrive/Documents/Files/MIT/spring 26/quant 2/chile1988/dataverse_files (3)/Paper Replication/Data/LB_Analysis.dta")
 
 # Read just the attribute table — no geometry needed
@@ -79,7 +57,6 @@ Dataverse_sf <- Dataverse |>
   st_as_sf(coords = c("longitud", "latitud"), crs = 4326)
 
 sf_use_s2(FALSE)
-
 comunas <- st_make_valid(comunas)
 
 # Spatial join
@@ -117,8 +94,6 @@ crosswalk <- crosswalk |>
 Dataverse <- Dataverse |>
   left_join(crosswalk, by = "comuna")
 
-# Should check that these comunas are actually in these regions, but we move 
-
 ```
 
 
@@ -134,5 +109,167 @@ Comunas_Censo_1992 |> filter(Codigo %in% sample_ids) |> select(Codigo, Nombre)
 
 
 ```{r}
+
+burocratas <- Comunas_Censo_1987 %>%
+  filter(
+    Rama_actividad %in% c(750:753, 800:803, 809, 851) |
+    Ocupacion %in% c(
+      # Military & police
+      110, 5162, 5163,
+      # Executive, legislative, public admin
+      1100, 1110, 1120, 1130,
+      # Legal system
+      2421, 2422, 2429, 3432, 3439,
+      # Education
+      2310, 2320, 2330, 2331, 2332, 2340, 2350, 2351, 2352,
+      3310, 3311, 3312, 3320, 3321, 3322, 3330, 3340,
+      # Healthcare
+      2221, 2222, 2223, 2224, 2225, 2226, 2227,
+      2231, 2232,
+      3220, 3221, 3222, 3223, 3224, 3225, 3226, 3227, 3228, 3229,
+      3231, 3232,
+      # State bureaucrats & inspectors
+      3440, 3441, 3442, 3443, 3444, 3449, 3450,
+      # Social workers
+      2446, 3460
+    )
+  )
+
+
+burocratas <- burocratas %>%
+  mutate(rango = case_when(
+    years_schooling >= 13 ~ "high",
+    years_schooling <= 8  ~ "low",
+    TRUE                  ~ NA_character_
+  ))
+
+View(burocratas)
+
+burocratas <- burocratas %>%
+  mutate(rango = case_when(
+    years_schooling >= 13              ~ "high",
+    years_schooling >= 9 & years_schooling <= 12 ~ "mid",
+    years_schooling <= 8               ~ "low",
+    TRUE                               ~ NA_character_
+  ))
+
+prop.table(table(burocratas$rango, useNA = "ifany"))
+
+prop_burocrata <- Comunas_Censo_1987 %>%
+  group_by(Comuna_1987_Origen3) %>%
+  summarise(prop_burocrata = mean(
+    Rama_actividad %in% c(750:753, 800:803, 809, 851) |
+    Ocupacion %in% c(
+      110, 5162, 5163,
+      1100, 1110, 1120, 1130,
+      2421, 2422, 2429, 3432, 3439,
+      2310, 2320, 2330, 2331, 2332, 2340, 2350, 2351, 2352,
+      3310, 3311, 3312, 3320, 3321, 3322, 3330, 3340,
+      2221, 2222, 2223, 2224, 2225, 2226, 2227,
+      2231, 2232,
+      3220, 3221, 3222, 3223, 3224, 3225, 3226, 3227, 3228, 3229,
+      3231, 3232,
+      3440, 3441, 3442, 3443, 3444, 3449, 3450,
+      2446, 3460
+    )
+  ))
+
+
+
+prop_rango <- Comunas_Censo_1987 %>%
+  group_by(Comuna_1987_Origen3) %>%
+  summarise(
+    prop_high = mean(years_schooling >= 13 & (
+      Rama_actividad %in% c(750:753, 800:803, 809, 851) |
+      Ocupacion %in% c(
+        110, 5162, 5163,
+        1100, 1110, 1120, 1130,
+        2421, 2422, 2429, 3432, 3439,
+        2310, 2320, 2330, 2331, 2332, 2340, 2350, 2351, 2352,
+        3310, 3311, 3312, 3320, 3321, 3322, 3330, 3340,
+        2221, 2222, 2223, 2224, 2225, 2226, 2227,
+        2231, 2232,
+        3220, 3221, 3222, 3223, 3224, 3225, 3226, 3227, 3228, 3229,
+        3231, 3232,
+        3440, 3441, 3442, 3443, 3444, 3449, 3450,
+        2446, 3460
+      ))),
+    prop_mid = mean(years_schooling >= 9 & years_schooling <= 12 & (
+      Rama_actividad %in% c(750:753, 800:803, 809, 851) |
+      Ocupacion %in% c(
+        110, 5162, 5163,
+        1100, 1110, 1120, 1130,
+        2421, 2422, 2429, 3432, 3439,
+        2310, 2320, 2330, 2331, 2332, 2340, 2350, 2351, 2352,
+        3310, 3311, 3312, 3320, 3321, 3322, 3330, 3340,
+        2221, 2222, 2223, 2224, 2225, 2226, 2227,
+        2231, 2232,
+        3220, 3221, 3222, 3223, 3224, 3225, 3226, 3227, 3228, 3229,
+        3231, 3232,
+        3440, 3441, 3442, 3443, 3444, 3449, 3450,
+        2446, 3460
+      ))),
+    prop_low = mean(years_schooling <= 8 & (
+      Rama_actividad %in% c(750:753, 800:803, 809, 851) |
+      Ocupacion %in% c(
+        110, 5162, 5163,
+        1100, 1110, 1120, 1130,
+        2421, 2422, 2429, 3432, 3439,
+        2310, 2320, 2330, 2331, 2332, 2340, 2350, 2351, 2352,
+        3310, 3311, 3312, 3320, 3321, 3322, 3330, 3340,
+        2221, 2222, 2223, 2224, 2225, 2226, 2227,
+        2231, 2232,
+        3220, 3221, 3222, 3223, 3224, 3225, 3226, 3227, 3228, 3229,
+        3231, 3232,
+        3440, 3441, 3442, 3443, 3444, 3449, 3450,
+        2446, 3460
+      )))
+  )
+
+
+prop_burocrata <- prop_burocrata %>%
+  mutate(Comuna_1987_Origen3 = as.character(Comuna_1987_Origen3))
+
+prop_rango <- prop_rango %>%
+  mutate(Comuna_1987_Origen3 = as.character(Comuna_1987_Origen3))
+
+Dataverse <- Dataverse %>%
+  left_join(prop_burocrata, by = c("ID_2002" = "Comuna_1987_Origen3")) %>%
+  left_join(prop_rango,     by = c("ID_2002" = "Comuna_1987_Origen3"))
+
+colnames(Dataverse)
+
+```
+
+
+```{r}
+
+first_nocontrols <- lm_robust(data = Dataverse, 
+formula = VoteShareNo ~ prop_burocrata, clusters = IDProv )
+
+first <- lm_robust(data = Dataverse, 
+formula = VoteShareNo ~ prop_burocrata + DMilitaryPresence + shVictims_70 + share_allende70 + lnDistStgo + lnDistRegCapital + IDProv + sh_educ_12more + sh_rural_70 + sh_econactivepop_70 + publicgoods + visible_pg + Pop70 + lessvisible_pg, clusters = IDProv )
+
+second_nocontrols<- lm_robust(data = Dataverse, 
+formula = VoteShareNo ~ prop_high + prop_low, clusters = IDProv )
+
+second <- lm_robust(data = Dataverse, 
+formula = VoteShareNo ~ prop_high + prop_low + DMilitaryPresence + shVictims_70 + share_allende70 + lnDistStgo + lnDistRegCapital + IDProv + sh_educ_12more + sh_rural_70 + sh_econactivepop_70 + publicgoods + visible_pg + Pop70 + lessvisible_pg, clusters = IDProv )
+
+modelsummary(
+  list("(1)" = first_nocontrols, 
+       "(2)" = first, 
+       "(3)" = second_nocontrols, 
+       "(4)" = second),
+  coef_map = c(
+    "prop_burocrata" = "Prop. Bureaucrats",
+    "prop_high"      = "Prop. High Rank",
+    "prop_low"       = "Prop. Low Rank"
+  ),
+  gof_map = c("nobs", "r.squared", "std.errors"), 
+    output = "table.png"
+)
+
+getwd()
 
 ```
