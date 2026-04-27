@@ -6,14 +6,14 @@ format: html
 ```{r}
 library(dplyr)
 library(haven)
-library(foreign)
 library(estimatr)
 library(sf)
-library(dplyr)
 library(modelsummary)
 ```
 
 ```{r}
+
+# CENSUS DATA 
 
 # Getting people data
 
@@ -21,48 +21,45 @@ Personas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile19
 
 # Only observations from people who lived in Chile in 1987
 
-Comunas_Censo_1987 <-Personas_Censo_1992 %>%
+Chilenos_Censo_1987 <-Personas_Censo_1992 %>%
   filter(Comuna_1987_Origen3 >= 1101 & Comuna_1987_Origen3 <= 13605,
          Comuna_1987_Origen3 %% 100 != 0)
+
+# DATA FROM THE PAPER REPLICATION 
+
+# Voting data by county
+
+VotingData_Dataverse <- read_dta("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/FinalDatasetForReplication.dta")
+
+# Read just the attribute table — no geometry needed
+Comunas_Dataverse <- st_read("C:/Users/mlzam/OneDrive/Documents/Files/MIT/spring 26/quant 2/chile1988/dataverse_files (3)/Paper Replication/Data/Map/cl_comunas_geo/Paper Replication/Data/Map/cl_comunas_geo.shp")
 
 # Comuna codes from 1992 census 
 
 Comunas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/COMUNAS.sav")
 
-# Creating number of years of schooling measure 
-mean(Comunas_Censo_1987$Tipo_educacion %in% 12:14, na.rm = TRUE)
-
-# Votes data
-
-Dataverse <- read_dta("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/FinalDatasetForReplication.dta")
-LB_Analysis <- read_dta("C:/Users/mlzam/OneDrive/Documents/Files/MIT/spring 26/quant 2/chile1988/dataverse_files (3)/Paper Replication/Data/LB_Analysis.dta")
-
-# Read just the attribute table — no geometry needed
-comunas <- st_read("C:/Users/mlzam/OneDrive/Documents/Files/MIT/spring 26/quant 2/chile1988/dataverse_files (3)/Paper Replication/Data/Map/cl_comunas_geo/Paper Replication/Data/Map/cl_comunas_geo.shp")
-
-# Read the shapefile
-comunas_sf <- comunas |> st_drop_geometry()
-
-# The sequential ID is likely just the row number
-# Create it explicitly
-crosswalk <- comunas_sf |>
-  mutate(seq_id = row_number()) |>
-  select(seq_id, ID_2002, NOMBRE)
-
 ```
 
 
 ```{r}
-Dataverse_sf <- Dataverse |>
+
+# Prepping the data 
+
+# Convert Dataverse voting data to spatial object using lat/lon columns
+Dataverse_temp <- VotingData_Dataverse |>
   st_as_sf(coords = c("longitud", "latitud"), crs = 4326)
 
+# Use flat geometry instead of spherical to avoid errors
 sf_use_s2(FALSE)
-comunas <- st_make_valid(comunas)
 
-# Spatial join
-crosswalk <- st_join(Dataverse_sf, comunas |> select(ID_2002, NOMBRE)) |>
-  st_drop_geometry() |>
-  select(comuna, ID_2002, NOMBRE)
+# Fix any invalid polygon geometries in the shapefile before joining
+Comunas_Dataverse <- st_make_valid(Comunas_Dataverse)
+
+# Spatial join: for each voting data point, find which comuna polygon 
+# it falls inside and attach that comuna's ID_2002 and name
+crosswalk <- st_join(Dataverse_temp, Comunas_Dataverse |> select(ID_2002, NOMBRE)) |>
+  st_drop_geometry() |>    # drop geometry, no longer needed
+  select(comuna, ID_2002, NOMBRE)  # keep only the three columns we need
 
 # Fix NAs manually, then drop unresolvable ones
 crosswalk <- crosswalk |>
@@ -75,6 +72,7 @@ crosswalk <- crosswalk |>
       comuna == 175 ~ "2102",  # Mejillones
       comuna == 184 ~ "11202", # Cisnes
       comuna == 298 ~ "10210", # Quinchao
+      comuna == 87 ~ "5104",  # Juan Fernández
       TRUE ~ ID_2002
     ),
     NOMBRE = case_when(
@@ -85,77 +83,132 @@ crosswalk <- crosswalk |>
       comuna == 175 ~ "Mejillones",
       comuna == 184 ~ "Cisnes",
       comuna == 298 ~ "Quinchao",
+      comuna == 87 ~ "Juan Fernández", 
       TRUE ~ NOMBRE
     )
   ) |>
   filter(!is.na(ID_2002))
 
-# Now merge into Dataverse
-Dataverse <- Dataverse |>
+# Now merge into voting data from Dataverse
+VotingData_Dataverse <- VotingData_Dataverse |>
   left_join(crosswalk, by = "comuna")
 
 ```
 
 
 ```{r}
-# Get 10 random ID_2002 codes from shapefile
-sample_ids <- comunas |> st_drop_geometry() |> slice_sample(n = 10) |> pull(ID_2002)
+# Sanity check: verify that ID_2002 codes from the shapefile 
+# match the Codigo codes in the 1992 census
 
-# Check those same codes in both datasets
-comunas |> st_drop_geometry() |> filter(ID_2002 %in% sample_ids) |> select(ID_2002, NOMBRE)
+# Step 1: randomly sample 10 comuna codes from the shapefile
+sample_ids <- Comunas_Dataverse |> st_drop_geometry() |> slice_sample(n = 10)
+ |> pull(ID_2002)
 
+# Step 2: look up those 10 codes in the shapefile
+# Shows what names the shapefile assigns them
+Comunas_Dataverse |> st_drop_geometry() |> filter(ID_2002 %in% sample_ids) 
+|> select(ID_2002, NOMBRE)
+
+# Step 3: look up those same 10 codes in the census
+# If names match, the coding systems are the same
 Comunas_Censo_1992 |> filter(Codigo %in% sample_ids) |> select(Codigo, Nombre)
-```
 
+```
 
 ```{r}
 
-burocratas <- Comunas_Censo_1987 %>%
+Chilenos_Censo_1987 <- Chilenos_Censo_1987 %>%
+  mutate(years_schooling = case_when(
+    Tipo_educacion %in% 0:1  ~ 0,           # Never attended or kinder
+    Tipo_educacion == 2      ~ Curso,        # Básica: years 1-8
+    Tipo_educacion %in% 3:11 ~ 8 + Curso,   # All media types + Normal
+    Tipo_educacion %in% 12:14 ~ 12 + Curso  # CFT, IP, Universidad
+  ))
+
+burocratas <- Chilenos_Censo_1987 %>%
   filter(
-    Rama_actividad %in% c(750:753, 800:803, 809, 851) |
+    Rama_actividad %in% c(
+      750, 751, 752, 753,  # Public administration and defense
+      800, 801, 802, 803,  # Education
+      809                  # Adult education and other types
+    ) |
     Ocupacion %in% c(
       # Military & police
-      110, 5162, 5163,
+      110,   # Armed forces, Carabineros, Investigations
+      5162,  # Carabineros
+      5163,  # Prison guards
+
       # Executive, legislative, public admin
-      1100, 1110, 1120, 1130,
+      1100,  # Members of executive/legislative and public admin
+      1110,  # Members of executive and legislative powers
+      1120,  # Senior public administration officials
+      1130,  # Heads of small communities
+
       # Legal system
-      2421, 2422, 2429, 3432, 3439,
+      2421,  # Lawyers
+      2422,  # Judges
+      2429,  # Legal professionals (except lawyers and judges)
+      3432,  # Legal technical assistants
+      3439,  # Diplomats/consular officials
+
       # Education
-      2310, 2320, 2330, 2331, 2332, 2340, 2350, 2351, 2352,
-      3310, 3311, 3312, 3320, 3321, 3322, 3330, 3340,
+      2310,  # University/higher education professors
+      2320,  # Secondary school teachers
+      2330,  # Primary and preschool teachers
+      2331,  # Primary school teachers
+      2332,  # Preschool teachers
+      2340,  # Special education teachers
+      2350,  # Other education professionals
+      2351,  # Pedagogical methods specialists
+      2352,  # General education inspectors
+      3310,  # Higher ed teaching assistants and secondary paradocentes
+      3311,  # Higher education teaching assistants
+      3312,  # Secondary teaching assistants
+      3320,  # Primary and preschool teaching assistants
+      3321,  # Primary teaching assistants
+      3322,  # Preschool teaching assistants
+      3330,  # Special education teaching assistants
+      3340,  # Technical instructors outside regular education
+
       # Healthcare
-      2221, 2222, 2223, 2224, 2225, 2226, 2227,
-      2231, 2232,
-      3220, 3221, 3222, 3223, 3224, 3225, 3226, 3227, 3228, 3229,
-      3231, 3232,
+      2221,  # Physicians and surgeons
+      2225,  # University nutritionists
+      2226,  # University medical technologists
+      2227,  # University physiotherapists/kinesiologists
+      2231,  # Professional nurses
+      2232,  # Professional midwives
+      3221,  # Medical practitioners
+      3229,  # Speech therapy technicians
+      3231,  # Nursing auxiliaries/paramedics
+      3232,  # Non-university auxiliary midwives
+
       # State bureaucrats & inspectors
-      3440, 3441, 3442, 3443, 3444, 3449, 3450,
+      3440,  # Public customs and tax administration agents
+      3441,  # Customs agents and border inspectors
+      3442,  # State treasury officials
+      3443,  # State social assistance and pension officials
+      3444,  # State licensing and permits officials
+      3449,  # State commercial establishment inspectors
+      3450,  # Police inspectors and detectives
+
       # Social workers
-      2446, 3460
+      2446,  # Professional social workers
+      3460   # Technical social workers and assistants
     )
   )
 
-
-burocratas <- burocratas %>%
-  mutate(rango = case_when(
-    years_schooling >= 13 ~ "high",
-    years_schooling <= 8  ~ "low",
-    TRUE                  ~ NA_character_
-  ))
-
-View(burocratas)
+# Remember that there is probably little variation in how many high income bureaucrats there is 
 
 burocratas <- burocratas %>%
   mutate(rango = case_when(
     years_schooling >= 13              ~ "high",
     years_schooling >= 9 & years_schooling <= 12 ~ "mid",
-    years_schooling <= 8               ~ "low",
-    TRUE                               ~ NA_character_
+    years_schooling <= 8               ~ "low"
   ))
 
 prop.table(table(burocratas$rango, useNA = "ifany"))
 
-prop_burocrata <- Comunas_Censo_1987 %>%
+prop_burocrata <- Chilenos_Censo_1987 %>%
   group_by(Comuna_1987_Origen3) %>%
   summarise(prop_burocrata = mean(
     Rama_actividad %in% c(750:753, 800:803, 809, 851) |
@@ -176,7 +229,7 @@ prop_burocrata <- Comunas_Censo_1987 %>%
 
 
 
-prop_rango <- Comunas_Censo_1987 %>%
+prop_rango <- Chilenos_Censo_1987 %>%
   group_by(Comuna_1987_Origen3) %>%
   summarise(
     prop_high = mean(years_schooling >= 13 & (
