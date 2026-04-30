@@ -147,6 +147,7 @@ I assume no unmeasured confounding (difficult)\
 
 1. Some of my covariates are post-plebiscite 
 2. It's hard to disentangle mechanisms for the difference between ranks. E.g. Higher-rank bureaucrats not only have more to lose, they also have more information
+3. I want to incorporate more behavior literature: risk, sensation seeking
 
 ## Questions/feedback
 
