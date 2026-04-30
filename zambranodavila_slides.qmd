@@ -1,0 +1,53 @@
+---
+title: "Do bureaucrats vote for the dictatorships that employ them?"
+author:
+  - name: Maria Zambrano Davila
+    email: maria@mit.edu
+    affiliations: MIT
+format:
+  clean-revealjs:
+    self-contained: true
+---
+
+## Research question 
+
+Authoritarians occassionally do elections, some of these are competitive 
+Bureaucrats are relatively easier voters to coerce
+
+We might think bureaucrats will not risk their jobs by working against their employer. However, bureaucrats may: 
+
+1. Genuinely not like the government they work for
+2. Believe they will keep their job after a transition
+2. See the impacts of authoritarianism in their personal lifes; voting is relational
+
+There is little evidence that secret ballots are violated ()
+
+## Motivation
+
+Whether bureaucrats vote for authoritarians or not matters because (old) evidence suggests that bureucrats have higher turnout rates
+
+Therefore, bureaucrats can shape close elections, and become an important support for democratic outcomes 
+
+## Arguments
+
+I argue two things: 
+
+1. State employment does not guarantee support for the incumbent, even under authoritarianism 
+
+2. Higher-rank bureaucrats are more likely to vote for the incumbent than lower-rank bureaucrats
+- They have more to lose after a transition 
+
+## Hypotheses 
+
+
+
+
+## Problems 
+
+1. Some of my covariates are post-treatment 
+2. Higher-rank bureaucrats not only have more to lose, they also have more information.
+- It's hard to disentangle mechanisms for the difference between ranks
+
+## Questions/feedback
+
+1. I really care about the relational side of voting. How do I measure that? 

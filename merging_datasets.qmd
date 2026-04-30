@@ -21,11 +21,8 @@ library(sensemakr)
 
 # Getting people data
 Personas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/PERSONA.sav",
-                                                col_select = c(Comuna_1987_Origen3, 
-                                                Tipo_educacion, 
-                                                Curso, 
-                                                Rama_actividad, 
-                                                Ocupacion))
+ col_select = c(Comuna_1987_Origen3, Tipo_educacion, Curso, Rama_actividad,
+  Ocupacion))
 
 # Only observations from Chileans who lived in Chile in 1987
 Chilenos_Censo_1987 <-Personas_Censo_1992 %>%
@@ -37,11 +34,9 @@ Chilenos_Censo_1987 <-Personas_Censo_1992 %>%
 # Voting data by county
 
 VotingData_Dataverse <- read_dta("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/FinalDatasetForReplication.dta",
-                                  col_select = c(comuna, IDProv,
-                                                 VoteShareNo,
-                                                 shvictimas_until74_70, shvictimas_75_plus_70,
-                                                 lnDistRegCapital, share_allende70, DMilitaryPresence,
-                                                 longitud, latitud))
+col_select = c(comuna, IDProv, VoteShareNo, shvictimas_until74_70, 
+shvictimas_75_plus_70, lnDistRegCapital, share_allende70, DMilitaryPresence, 
+longitud, latitud))
 
 # Read shapefile for geometry 
 Comunas_Dataverse <- st_read("C:/Users/mlzam/OneDrive/Documents/Files/MIT/spring 26/quant 2/chile1988/dataverse_files (3)/Paper Replication/Data/Map/cl_comunas_geo/Paper Replication/Data/Map/cl_comunas_geo.shp",
@@ -289,7 +284,8 @@ VotingData_Dataverse <- VotingData_Dataverse %>%
 tidy_model <- function(model, model_name, keep_terms) {
   as.data.frame(summary(model)$coefficients) %>%
     tibble::rownames_to_column("term") %>%
-    rename(estimate = Estimate, se = `Std. Error`, ci_low = `CI Lower`, ci_high = `CI Upper`) %>%
+    rename(estimate = Estimate, se = `Std. Error`, ci_low = `CI Lower`, 
+    ci_high = `CI Upper`) %>%
     filter(term %in% keep_terms) %>%
     mutate(model = model_name)
 }
@@ -306,15 +302,16 @@ clusters = IDProv, weights = pop_1987)
 
 first <- lm_robust(data = VotingData_Dataverse, 
 formula = VoteShareNo ~ prop_burocrata + sh_victims_total +
-  lnDistRegCapital + share_allende70 + pop_1987 + factor(IDProv), se_type = "CR2",
-  clusters = IDProv, weights = pop_1987)
+  lnDistRegCapital + share_allende70 + pop_1987 + factor(IDProv), 
+  se_type = "CR2", clusters = IDProv, weights = pop_1987)
 
 ## -----------------------------------------------------------------------------
 # GRAPHS 
 ## -----------------------------------------------------------------------------
 
 # Controls, labels, order
-controls <- c("pop_1987", "lnDistRegCapital", "share_allende70", "sh_victims_total")
+controls <- c("pop_1987", "lnDistRegCapital", "share_allende70", 
+"sh_victims_total")
 
 term_labels <- c(
   "prop_burocrata"        = "Bureaucrats per county",
@@ -330,9 +327,11 @@ term_order_1 <- c("pop_1987", "lnDistRegCapital", "share_allende70",
 # Plot 1: prop_burocrata with all controls
 bind_rows(
   tidy_model(first_nocontrols, "No Controls",   "prop_burocrata"),
-  tidy_model(first,            "With Controls", c("prop_burocrata", controls))
+  tidy_model(first,            "With Controls", c("prop_burocrata", 
+  controls))
 ) %>%
-  ggplot(aes(x = estimate, y = factor(term, levels = term_order_1), color = model)) +
+  ggplot(aes(x = estimate, y = factor(term, levels = term_order_1), 
+  color = model)) +
   geom_point(size = 3, position = position_dodge(width = 0.5)) +
   geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
                  height = 0.2, position = position_dodge(width = 0.5)) +
@@ -659,12 +658,6 @@ ggplot(VotingData_Dataverse, aes(x = prop_burocrata, y = VoteShareNo)) +
   labs(title = "Bureaucrat Share vs No Vote Share (1988)",
        x = "Proportion of Bureaucrats", y = "Vote Share No") +
   theme_minimal()
-
-# Notice the outlier 
-VotingData_Dataverse %>% 
-  arrange(desc(prop_burocrata)) %>% 
-  select(NOMBRE, prop_burocrata, VoteShareNo) %>% 
-  head(5)
 
 # Rerun bureaucrat share vs Vote Share No
 ggplot(VotingData_Dataverse, aes(x = prop_burocrata, y = VoteShareNo)) +

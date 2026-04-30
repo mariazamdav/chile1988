@@ -5,3 +5,18 @@
 *.sav
 *.logdata/
 data/
+
+# Quarto outputs
+*.html
+*_files/
+_extensions/
+.quarto/
+*.js
+
+# Keep only the source
+!*.qmd
+!table_first.png
+!table_second.png
+!table_prop.png
+!zambranodavila_slides.html
+!*.pdf
