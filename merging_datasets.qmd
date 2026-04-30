@@ -12,6 +12,7 @@ library(sf)
 library(modelsummary)
 library(ggplot2)
 library(tidyr)
+library(sensemakr)
 ```
 
 ```{r}
@@ -19,7 +20,12 @@ library(tidyr)
 # CENSUS DATA 
 
 # Getting people data
-Personas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/PERSONA.sav")
+Personas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/PERSONA.sav",
+                                                col_select = c(Comuna_1987_Origen3, 
+                                                Tipo_educacion, 
+                                                Curso, 
+                                                Rama_actividad, 
+                                                Ocupacion))
 
 # Only observations from Chileans who lived in Chile in 1987
 Chilenos_Censo_1987 <-Personas_Censo_1992 %>%
@@ -29,13 +35,21 @@ Chilenos_Censo_1987 <-Personas_Censo_1992 %>%
 # DATA FROM THE PAPER REPLICATION 
 
 # Voting data by county
-VotingData_Dataverse <- read_dta("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/FinalDatasetForReplication.dta")
+
+VotingData_Dataverse <- read_dta("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/FinalDatasetForReplication.dta",
+                                  col_select = c(comuna, IDProv,
+                                                 VoteShareNo,
+                                                 shvictimas_until74_70, shvictimas_75_plus_70,
+                                                 lnDistRegCapital, share_allende70, DMilitaryPresence,
+                                                 longitud, latitud))
 
 # Read shapefile for geometry 
-Comunas_Dataverse <- st_read("C:/Users/mlzam/OneDrive/Documents/Files/MIT/spring 26/quant 2/chile1988/dataverse_files (3)/Paper Replication/Data/Map/cl_comunas_geo/Paper Replication/Data/Map/cl_comunas_geo.shp")
+Comunas_Dataverse <- st_read("C:/Users/mlzam/OneDrive/Documents/Files/MIT/spring 26/quant 2/chile1988/dataverse_files (3)/Paper Replication/Data/Map/cl_comunas_geo/Paper Replication/Data/Map/cl_comunas_geo.shp",
+query = "SELECT ID_2002, NOMBRE FROM cl_comunas_geo")
 
 # County codes from 1992 census 
-Comunas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/COMUNAS.sav")
+Comunas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/COMUNAS.sav",
+  col_select = c(Codigo, Nombre))
 
 ```
 
@@ -222,6 +236,8 @@ Chilenos_Censo_1987 <- Chilenos_Censo_1987 %>%
     )
   )
 
+# ------------------------------------------------------------------------------
+
 # Creating the county level variables 
 
 # Proportion of bureaucrats per county
@@ -249,11 +265,350 @@ VotingData_Dataverse <- VotingData_Dataverse %>%
   left_join(prop_burocrata, by = c("ID_2002_num" = "Comuna_1987_Origen3")) %>%
   left_join(prop_rango,     by = c("ID_2002_num" = "Comuna_1987_Origen3")) %>%
   left_join(pop_1987,       by = c("ID_2002_num" = "Comuna_1987_Origen3")) %>%
-  select(-ID_2002_num)
+  select(-ID_2002_num) %>%
+  mutate(
+    sh_victims_total = (shvictimas_until74_70 + shvictimas_75_plus_70),
+        prop_burocrata = prop_burocrata * 100,
+        prop_high      = prop_high * 100,
+        prop_mid       = prop_mid  * 100,
+        prop_low       = prop_low  * 100) %>%
+    mutate(share_high_among_buro = (prop_high / prop_burocrata) *100,
+    share_mid_among_buro  = (prop_mid  / prop_burocrata) *100)
+    
+
+VotingData_Dataverse <- VotingData_Dataverse %>%
+  filter(NOMBRE != "Cabo de Hornos")
+
+
+```
+
+## Regressions 
+
+```{r}
+
+tidy_model <- function(model, model_name, keep_terms) {
+  as.data.frame(summary(model)$coefficients) %>%
+    tibble::rownames_to_column("term") %>%
+    rename(estimate = Estimate, se = `Std. Error`, ci_low = `CI Lower`, ci_high = `CI Upper`) %>%
+    filter(term %in% keep_terms) %>%
+    mutate(model = model_name)
+}
+
+## -----------------------------------------------------------------------------
+# REGRESSIONS 
+## -----------------------------------------------------------------------------
+
+
+# Running the regressions 
+first_nocontrols <- lm_robust(data = VotingData_Dataverse, 
+formula = VoteShareNo ~ prop_burocrata + factor(IDProv), se_type = "CR2",
+clusters = IDProv, weights = pop_1987)
+
+first <- lm_robust(data = VotingData_Dataverse, 
+formula = VoteShareNo ~ prop_burocrata + sh_victims_total +
+  lnDistRegCapital + share_allende70 + pop_1987 + factor(IDProv), se_type = "CR2",
+  clusters = IDProv, weights = pop_1987)
+
+## -----------------------------------------------------------------------------
+# GRAPHS 
+## -----------------------------------------------------------------------------
+
+# Controls, labels, order
+controls <- c("pop_1987", "lnDistRegCapital", "share_allende70", "sh_victims_total")
+
+term_labels <- c(
+  "prop_burocrata"        = "Bureaucrats per county",
+  "sh_victims_total"      = "Total victims / Pop. 1970",
+  "share_allende70"       = "Allende vote share 1970",
+  "lnDistRegCapital"      = "Ln distance to regional capital",
+  "pop_1987"              = "Population 1987"
+)
+
+term_order_1 <- c("pop_1987", "lnDistRegCapital", "share_allende70", 
+                  "sh_victims_total", "prop_burocrata")
+
+# Plot 1: prop_burocrata with all controls
+bind_rows(
+  tidy_model(first_nocontrols, "No Controls",   "prop_burocrata"),
+  tidy_model(first,            "With Controls", c("prop_burocrata", controls))
+) %>%
+  ggplot(aes(x = estimate, y = factor(term, levels = term_order_1), color = model)) +
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.2, position = position_dodge(width = 0.5)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  scale_y_discrete(labels = term_labels) +
+  labs(title = "Model 1: Bureaucrat Share vs Vote Share No",
+       x = "Estimate (95% CI)", y = NULL, color = NULL) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+## -----------------------------------------------------------------------------
+# MODEL 
+## -----------------------------------------------------------------------------
+
+# Model summary
+modelsummary(
+  list("(1)" = first_nocontrols, 
+       "(2)" = first),
+  coef_map = c(
+    "prop_burocrata" = "Prop. Bureaucrats"
+  ),
+  gof_map = c("nobs", "r.squared", "std.errors"),
+  fmt = 10,
+  output = "table_first.png"
+)
+
+
+```
+
+
+
+```{r}
+
+## -----------------------------------------------------------------------------
+# REGRESSIONS 
+## -----------------------------------------------------------------------------
+
+# Running the regressions
+second_nocontrols <- lm_robust(data = VotingData_Dataverse, 
+formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro + 
+  factor(IDProv), 
+se_type = "CR2", clusters = IDProv, weights = pop_1987)
+
+second <- lm_robust(data = VotingData_Dataverse, 
+formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro +
+   sh_victims_total + lnDistRegCapital + share_allende70 + pop_1987 + 
+   factor(IDProv), 
+  se_type = "CR2", clusters = IDProv, weights = pop_1987)
+
+## -----------------------------------------------------------------------------
+# GRAPHS 
+## -----------------------------------------------------------------------------
+
+# Updated controls and labels
+controls <- c("pop_1987", "lnDistRegCapital", "share_allende70", 
+"sh_victims_total")
+
+term_labels <- c(
+  "share_high_among_buro" = "Share high rank among bureaucrats",
+  "share_mid_among_buro"  = "Share mid rank among bureaucrats",
+  "pop_1987"              = "Population 1987",
+  "lnDistRegCapital"      = "Ln distance to regional capital",
+  "share_allende70"       = "Allende vote share 1970",
+  "sh_victims_total" = "Total Victims / Pop. 1970"
+)
+
+term_order <- c("pop_1987", "lnDistRegCapital", "share_allende70", 
+                "sh_victims_total", "share_mid_among_buro", 
+                "share_high_among_buro")
+
+bind_rows(
+  tidy_model(second_nocontrols, "No Controls",   c("share_high_among_buro", 
+  "share_mid_among_buro")),
+  tidy_model(second,            "With Controls", c("share_high_among_buro", 
+  "share_mid_among_buro", controls))
+) %>%
+  ggplot(aes(x = estimate, y = factor(term, levels = term_order), 
+  color = model)) +
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.2, position = position_dodge(width = 0.5)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  scale_y_discrete(labels = term_labels) +
+  labs(title = "Bureaucrat Rank Composition vs Vote Share No",
+       x = "Estimate (95% CI)", y = NULL, color = NULL) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+## -----------------------------------------------------------------------------
+# MODEL 
+## -----------------------------------------------------------------------------
+
+modelsummary(
+  list("(1) No Controls" = second_nocontrols, 
+       "(2) With Controls" = second),
+  coef_map = c(
+    "share_high_among_buro" = "Share high rank among bureaucrats",
+    "share_mid_among_buro"  = "Share mid rank among bureaucrats"
+  ),
+  gof_map = c("nobs", "r.squared", "std.errors"),
+  fmt = 4,
+  output = "table_second.png"
+)
+
+```
+
+
+```{r}
+
+## -----------------------------------------------------------------------------
+# REGRESSIONS 
+## -----------------------------------------------------------------------------
+
+second_nocontrols_prop <- lm_robust(data = VotingData_Dataverse, 
+formula = VoteShareNo ~ prop_high + prop_mid + factor(IDProv), 
+clusters = IDProv, weights = pop_1987)
+
+second_prop <- lm_robust(data = VotingData_Dataverse, 
+formula = VoteShareNo ~ prop_high + prop_mid + DMilitaryPresence +
+  lnDistRegCapital + share_allende70 + pop_1987 + factor(IDProv), 
+  clusters = IDProv, weights = pop_1987)
+
+## -----------------------------------------------------------------------------
+# GRAPHS 
+## -----------------------------------------------------------------------------
+
+term_labels_prop <- c(
+  "prop_high"        = "High rank bureaucrats per county",
+  "prop_mid"         = "Mid rank bureaucrats per county",
+  "pop_1987"         = "Population 1987",
+  "lnDistRegCapital" = "Ln distance to regional capital",
+  "DMilitaryPresence" = "Military presence",
+  "share_allende70"  = "Allende vote share 1970"
+)
+
+term_order_prop <- c("pop_1987", "lnDistRegCapital", "share_allende70", 
+                     "DMilitaryPresence", "prop_mid", "prop_high")
+
+bind_rows(
+  tidy_model(second_nocontrols_prop, "No Controls",   c("prop_high", 
+  "prop_mid")),
+  tidy_model(second_prop,            "With Controls", c("prop_high", 
+  "prop_mid", controls))
+) %>%
+  ggplot(aes(x = estimate, y = factor(term, levels = term_order_prop), 
+  color = model)) +
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.2, position = position_dodge(width = 0.5)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  scale_y_discrete(labels = term_labels_prop) +
+  labs(title = "Bureaucrat Rank Share vs Vote Share No",
+       x = "Estimate (95% CI)", y = NULL, color = NULL) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+## -----------------------------------------------------------------------------
+# MODEL 
+## -----------------------------------------------------------------------------
+
+modelsummary(
+  list("(1) No Controls" = second_nocontrols_prop, 
+       "(2) With Controls" = second_prop),
+  coef_map = c(
+    "prop_high" = "High rank bureaucrats per county",
+    "prop_mid"  = "Mid rank bureaucrats per county"
+  ),
+  fmt = 7,
+  gof_map = c("nobs", "r.squared", "std.errors"),
+  output = "table_prop.png"
+)
+```
+
+
+```{r}
+
+## -----------------------------------------------------------------------------
+# SENSITIVITY ANALYSIS 
+## -----------------------------------------------------------------------------
+
+sens_model <- lm(VoteShareNo ~ share_high_among_buro + share_mid_among_buro + 
+  sh_victims_total + lnDistRegCapital + share_allende70 + pop_1987 + 
+                   factor(IDProv),
+                 data = VotingData_Dataverse,
+                 weights = pop_1987)
+
+sens <- sensemakr(model = sens_model,
+                  treatment = "share_high_among_buro",
+                  kd = 1:3,
+                  ky = 1:3)
+
+plot(sens)
+summary(sens)
+
+```
+
+## Robustness 
+
+1. Sensitivity tests 
+
+```{r}
+
+## USING MILITARY PRESENCE INSTEAD OF VICTIMS 
+
+## -----------------------------------------------------------------------------
+# REGRESSIONS
+## -----------------------------------------------------------------------------
+
+second_nocontrols_mil <- lm_robust(data = VotingData_Dataverse, 
+formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro + 
+  factor(IDProv), 
+clusters = IDProv, weights = pop_1987)
+
+second_mil <- lm_robust(data = VotingData_Dataverse, 
+formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro + 
+  DMilitaryPresence + lnDistRegCapital + share_allende70 + pop_1987 + 
+  factor(IDProv), 
+  clusters = IDProv, weights = pop_1987)
+
+## -----------------------------------------------------------------------------
+# GRAPHS
+## -----------------------------------------------------------------------------
+
+controls <- c("pop_1987", "lnDistRegCapital", "share_allende70",
+"DMilitaryPresence")
+
+term_labels <- c(
+  "share_high_among_buro" = "Share high rank among bureaucrats",
+  "share_mid_among_buro"  = "Share mid rank among bureaucrats",
+  "pop_1987"              = "Population 1987",
+  "lnDistRegCapital"      = "Ln distance to regional capital",
+  "share_allende70"       = "Allende vote share 1970",
+  "DMilitaryPresence" = "Military Presence"
+)
+
+term_order <- c("pop_1987", "lnDistRegCapital", "share_allende70", 
+                "DMilitaryPresence", "share_mid_among_buro", 
+                "share_high_among_buro")
+
+bind_rows(
+  tidy_model(second_nocontrols_mil, "No Controls",   
+  c("share_high_among_buro", "share_mid_among_buro")),
+  tidy_model(second_mil,            "With Controls", 
+  c("share_high_among_buro", "share_mid_among_buro", controls))
+) %>%
+  ggplot(aes(x = estimate, y = factor(term, levels = term_order), 
+  color = model)) +
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.2, position = position_dodge(width = 0.5)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  scale_y_discrete(labels = term_labels) +
+  labs(title = "Bureaucrat Rank Composition vs Vote Share No",
+       x = "Estimate (95% CI)", y = NULL, color = NULL) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+## -----------------------------------------------------------------------------
+# MODEL
+## -----------------------------------------------------------------------------
+
+modelsummary(
+  list("(1) No Controls" = second_nocontrols, 
+       "(2) With Controls" = second),
+  coef_map = c(
+    "share_high_among_buro" = "Share high rank among bureaucrats",
+    "share_mid_among_buro"  = "Share mid rank among bureaucrats"
+  ),
+  gof_map = c("nobs", "r.squared", "std.errors"),
+  output = "table.png"
+)
 
 ```
 
 ```{r}
+
 # Getting a sense of the data graphically 
 
 # Distribution of years of schooling
@@ -306,17 +661,10 @@ ggplot(VotingData_Dataverse, aes(x = prop_burocrata, y = VoteShareNo)) +
   theme_minimal()
 
 # Notice the outlier 
-
 VotingData_Dataverse %>% 
   arrange(desc(prop_burocrata)) %>% 
   select(NOMBRE, prop_burocrata, VoteShareNo) %>% 
   head(5)
-
-# It's Antartica; likely just state researchers 
-# Remove it
-
-VotingData_Dataverse <- VotingData_Dataverse %>%
-  filter(NOMBRE != "Cabo de Hornos")
 
 # Rerun bureaucrat share vs Vote Share No
 ggplot(VotingData_Dataverse, aes(x = prop_burocrata, y = VoteShareNo)) +
@@ -326,217 +674,31 @@ ggplot(VotingData_Dataverse, aes(x = prop_burocrata, y = VoteShareNo)) +
        x = "Proportion of Bureaucrats", y = "Vote Share No") +
   theme_minimal()
 
-```
 
+# Looking at variation of rank among municipalities 
 
+# Same axis for all three
+max_prop <- prop_rango %>%
+  summarise(max(prop_high, prop_mid, prop_low, na.rm = TRUE)) %>%
+  pull()
 
-```{r}
-
-# Rescaling the data for interpretation
-
-VotingData_Dataverse <- VotingData_Dataverse %>%
-  mutate(
-    prop_burocrata = prop_burocrata * 100,
-    prop_high      = prop_high * 100,
-    prop_mid       = prop_mid  * 100,
-    prop_low       = prop_low  * 100
-  )
-
-# Running the regressions 
-
-first_nocontrols <- lm_robust(data = VotingData_Dataverse, 
-formula = VoteShareNo ~ prop_burocrata, clusters = IDProv )
-
-first <- lm_robust(data = VotingData_Dataverse, 
-formula = VoteShareNo ~  prop_burocrata + DMilitaryPresence + YearPost75 + 
-  share_allende70 + lnDistStgo + lnDistRegCapital + pop_1987, clusters = IDProv)
-
-second_nocontrols <- lm_robust(data = VotingData_Dataverse, 
-formula = VoteShareNo ~ prop_high + prop_mid, clusters = IDProv )
-
-second <- lm_robust(data = VotingData_Dataverse, 
-formula = VoteShareNo ~  prop_high + prop_mid + DMilitaryPresence + YearPost75 + 
-  share_allende70 + lnDistStgo + lnDistRegCapital + pop_1987, clusters = IDProv)
-
-```
-
-```{r}
-# Plots without controls 
-
-tidy_model <- function(model, model_name, keep_terms) {
-  as.data.frame(summary(model)$coefficients) %>%
-    tibble::rownames_to_column("term") %>%
-    rename(estimate = Estimate, se = `Std. Error`, ci_low = `CI Lower`, ci_high = `CI Upper`) %>%
-    filter(term %in% keep_terms) %>%
-    mutate(model = model_name)
-}
-
-# Plot 1: prop_burocrata with and without controls
-bind_rows(
-  tidy_model(first_nocontrols, "No Controls", "prop_burocrata"),
-  tidy_model(first,            "With Controls", "prop_burocrata")
-) %>%
-  ggplot(aes(x = estimate, y = term, color = model)) +
-  geom_point(size = 3, position = position_dodge(width = 0.5)) +
-  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
-                 height = 0.2, position = position_dodge(width = 0.5)) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Bureaucrat Share vs Vote Share No",
-       x = "Estimate (95% CI)", y = NULL, color = NULL) +
+prop_rango %>%
+  pivot_longer(cols = c(prop_high, prop_mid, prop_low),
+               names_to = "rango", values_to = "proportion") %>%
+  mutate(rango = recode(rango,
+                        prop_high = "High Rank",
+                        prop_mid  = "Mid Rank",
+                        prop_low  = "Low Rank")) %>%
+  ggplot(aes(x = reorder(as.character(Comuna_1987_Origen3), proportion), 
+             y = proportion, color = rango)) +
+  geom_point(size = 0.8, alpha = 0.6) +
+  facet_wrap(~rango) +
+  ylim(0, max_prop) +
+  labs(title = "Bureaucrat Rank Share by Municipality",
+       x = NULL, y = "Proportion") +
   theme_minimal() +
-  theme(legend.position = "bottom")
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = "none")
 
-# Plot 2: prop_high + prop_mid with and without controls
-bind_rows(
-  tidy_model(second_nocontrols, "No Controls",   c("prop_high", "prop_mid")),
-  tidy_model(second,            "With Controls", c("prop_high", "prop_mid"))
-) %>%
-  ggplot(aes(x = estimate, y = term, color = model)) +
-  geom_point(size = 3, position = position_dodge(width = 0.5)) +
-  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
-                 height = 0.2, position = position_dodge(width = 0.5)) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Bureaucrat Rank vs Vote Share No",
-       x = "Estimate (95% CI)", y = NULL, color = NULL) +
-  theme_minimal() +
-  theme(legend.position = "bottom")
-
-```
-
-```{r}
-
-# Plots with controls 
-
-tidy_model <- function(model, model_name, keep_terms) {
-  as.data.frame(summary(model)$coefficients) %>%
-    tibble::rownames_to_column("term") %>%
-    rename(estimate = Estimate, se = `Std. Error`, ci_low = `CI Lower`, ci_high = `CI Upper`) %>%
-    filter(term %in% keep_terms) %>%
-    mutate(model = model_name)
-}
-
-controls <- c("DMilitaryPresence", "YearPost75", "share_allende70", 
-              "lnDistStgo", "lnDistRegCapital", "pop_1987")
-
-# Plot 1: prop_burocrata
-bind_rows(
-  tidy_model(first_nocontrols, "No Controls",   "prop_burocrata"),
-  tidy_model(first,            "With Controls", c("prop_burocrata", controls))
-) %>%
-  ggplot(aes(x = estimate, y = reorder(term, estimate), color = model)) +
-  geom_point(size = 3, position = position_dodge(width = 0.5)) +
-  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
-                 height = 0.2, position = position_dodge(width = 0.5)) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Model 1: Bureaucrat Share vs Vote Share No",
-       x = "Estimate (95% CI)", y = NULL, color = NULL) +
-  theme_minimal() +
-  theme(legend.position = "bottom")
-
-# Plot 2: prop_high + prop_mid
-bind_rows(
-  tidy_model(second_nocontrols, "No Controls",   c("prop_high", "prop_mid")),
-  tidy_model(second,            "With Controls", c("prop_high", "prop_mid", controls))
-) %>%
-  ggplot(aes(x = estimate, y = reorder(term, estimate), color = model)) +
-  geom_point(size = 3, position = position_dodge(width = 0.5)) +
-  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
-                 height = 0.2, position = position_dodge(width = 0.5)) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Model 2: Bureaucrat Rank vs Vote Share No",
-       x = "Estimate (95% CI)", y = NULL, color = NULL) +
-  theme_minimal() +
-  theme(legend.position = "bottom")
-```
-
-```{r}
-
-modelsummary(
-  list("(1)" = first_nocontrols, 
-       "(2)" = first, 
-       "(3)" = second_nocontrols, 
-       "(4)" = second),
-  coef_map = c(
-    "prop_burocrata" = "Prop. Bureaucrats",
-    "prop_high"      = "Prop. High rango",
-    "prop_low"       = "Prop. Low rango"
-  ),
-  gof_map = c("nobs", "r.squared", "std.errors"), 
-    output = "table.png"
-)
-
-```
-
-
-```{r}
-# Running the regressions 
-
-
-VotingData_Dataverse <- VotingData_Dataverse %>%
-  mutate(Bureaucrat = Bureaucrat * 100)
-
-
-first_nocontrols <- lm_robust(data = VotingData_Dataverse, 
-formula = VoteShareNo ~ Bureaucrat, clusters = IDProv)
-
-first <- lm_robust(data = VotingData_Dataverse, 
-formula = VoteShareNo ~ Bureaucrat + DMilitaryPresence + YearPost75 + 
-  share_allende70 + lnDistStgo + lnDistRegCapital + pop_1987, clusters = IDProv)
-
-# Plot
-bind_rows(
-  tidy_model(first_nocontrols, "No Controls",   "Bureaucrat"),
-  tidy_model(first,            "With Controls", c("Bureaucrat", controls))
-) %>%
-  ggplot(aes(x = estimate, y = reorder(term, estimate), color = model)) +
-  geom_point(size = 3, position = position_dodge(width = 0.5)) +
-  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
-                 height = 0.2, position = position_dodge(width = 0.5)) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Bureaucrat Victims vs Vote Share No",
-       x = "Estimate (95% CI)", y = NULL, color = NULL) +
-  theme_minimal() +
-  theme(legend.position = "bottom")
-
-bind_rows(
-  tidy_model(first_nocontrols, "No Controls",   "Bureaucrat"),
-  tidy_model(first,            "With Controls", "Bureaucrat")
-) %>%
-  ggplot(aes(x = estimate, y = model, color = model)) +
-  geom_point(size = 3) +
-  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high), height = 0.2) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Effect of Bureaucrat Victims on Vote Share No",
-       x = "Estimate (95% CI)", y = NULL, color = NULL) +
-  theme_minimal() +
-  theme(legend.position = "none")
-
-
-summary(VotingData_Dataverse$shVictims_70)
-summary(VotingData_Dataverse$Bureaucrat)
-
-
-VotingData_Dataverse <- VotingData_Dataverse %>%
-  mutate(sh_victims_total = (shvictimas_until74_70 + shvictimas_75_plus_70)*100)
-vic_nocontrols <- lm_robust(data = VotingData_Dataverse,
-formula = VoteShareNo ~ sh_victims_total, clusters = IDProv)
-
-vic_controls <- lm_robust(data = VotingData_Dataverse,
-formula = VoteShareNo ~ sh_victims_total + DMilitaryPresence +
-  share_allende70 + lnDistStgo + lnDistRegCapital + pop_1987, clusters = IDProv)
-
-bind_rows(
-  tidy_model(first_nocontrols, "Bureaucrat - No Controls",   "Bureaucrat"),
-  tidy_model(first,            "Bureaucrat - With Controls", "Bureaucrat"),
-  tidy_model(vic_nocontrols,   "Victims - No Controls",      "sh_victims_total"),
-  tidy_model(vic_controls,     "Victims - With Controls",    "sh_victims_total")
-) %>%
-  ggplot(aes(x = estimate, y = model, color = model)) +
-  geom_point(size = 3) +
-  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high), height = 0.2) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Bureaucrat vs General Victims on Vote Share No",
-       x = "Estimate (95% CI)", y = NULL) +
-  theme_minimal() +
-  theme(legend.position = "none")
 ```
