@@ -13,6 +13,7 @@ library(modelsummary)
 library(ggplot2)
 library(tidyr)
 library(sensemakr)
+library(kableExtra)
 ```
 
 ```{r}
@@ -542,19 +543,87 @@ plot(sens_first)
 summary(sens_first)
 
 
-sens_model <- lm(VoteShareNo ~ share_high_among_buro + share_mid_among_buro + 
+sens_model_second <- lm(VoteShareNo ~ share_high_among_buro + share_mid_among_buro + 
   sh_victims_total + lnDistRegCapital + share_allende70 + pop_1987 + 
                    factor(IDProv),
                  data = VotingData_Dataverse,
                  weights = pop_1987)
 
-sens <- sensemakr(model = sens_model,
+sens_second <- sensemakr(model = sens_model_second,
                   treatment = "share_high_among_buro",
                   kd = 1:3,
                   ky = 1:3)
 
-plot(sens)
-summary(sens)
+plot(sens_second)
+summary(sens_second)
+
+
+sens_model_third <- lm(VoteShareNo ~ share_high_among_buro + share_mid_among_buro + 
+  sh_victims_total + lnDistRegCapital + share_allende70 + pop_1987 + 
+                   factor(IDProv),
+                 data = VotingData_Dataverse,
+                 weights = pop_1987)
+
+sens_third <- sensemakr(model = sens_model_third,
+                  treatment = "share_mid_among_buro",
+                  kd = 1:3,
+                  ky = 1:3)
+
+plot(sens_third)
+summary(sens_third)
+
+
+extract_sens <- function(s, label) {
+  ss <- s$sensitivity_stats
+  tibble(
+    Model            = label,
+    Estimate         = round(ss$estimate, 4),
+    SE               = round(ss$se, 4),
+    `t-stat`         = round(ss$t_statistic, 4),
+    `Partial R² (D)` = round(ss$r2yd.x, 4),
+    `RV (sig.)`      = round(ss$rv_qa, 4),
+    `RV (zero)`      = round(ss$rv_q, 4)
+  )
+}
+
+bind_rows(
+  extract_sens(sens_second, "Higher-rank bureaucrats"),
+  extract_sens(sens_third,  "Mid-rank Bureaucrats")
+) |>
+  kbl(
+    caption  = "Table 1. Sensitivity Analysis to Omitted Variable Bias (Cinelli & Hazlett 2020)",
+    align    = c("l", rep("c", 6)),
+    booktabs = TRUE
+  ) |>
+  kable_styling(
+    latex_options     = c("hold_position"),
+    bootstrap_options = c("condensed"),
+    full_width        = FALSE,
+    font_size         = 13
+  ) |>
+  column_spec(1, bold = TRUE, width = "5cm") |>
+  column_spec(2:7, width = "2cm") |>
+  row_spec(0, bold = TRUE, background = "#f0f0f0") |>
+  footnote(
+    general           = "RV = robustness value. Partial R²(D): partial R² of the treatment with the outcome after controlling for observed covariates. RV(sig.): minimum confounding strength required to eliminate statistical significance at the 5% level. RV(zero): minimum confounding strength required to drive the point estimate to zero. All models include province fixed effects and are weighted by 1987 population.",
+    footnote_as_chunk = TRUE,
+    general_title     = "Note: "
+  ) |>
+  save_kable("sensitivity_table.png", zoom = 3)
+
+sens_model_propmid <- lm(VoteShareNo ~ prop_high + prop_mid + DMilitaryPresence +
+  lnDistRegCapital + share_allende70 + pop_1987 + factor(IDProv),
+  data    = VotingData_Dataverse,
+  weights = pop_1987)
+
+sens_propmid <- sensemakr(model     = sens_model_propmid,
+                          treatment = "prop_mid",
+                          kd        = 1:3,
+                          ky        = 1:3)
+
+plot(sens_propmid)
+summary(sens_propmid)
+
 
 ```
 

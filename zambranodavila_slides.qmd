@@ -14,57 +14,77 @@ setwd("C:/Users/mlzam/OneDrive/Documents/repos/chile1988")
 ```
 
 
-## Research question 
+## Background
 
-Authoritarians occassionally do elections, some of these are competitive 
+Authoritarians occassionally do semi-competitive elections
+
 Bureaucrats are relatively easier voters to coerce
 
-We might think bureaucrats will not risk their jobs by voting against their employer. However, bureaucrats may: 
+There is little evidence that secret ballots are violated (Hicken and Nathan 2022)
 
-1. Genuinely not like the government they work for
-2. Believe they will keep their job after a transition
-2. See the impacts of authoritarianism in their personal lifes; voting is relational
+We might think bureaucrats will not risk their jobs by voting against their employer
 
-There is little evidence that secret ballots are violated ()
+## Theory 
+
+I argue, whether bureaucrats vote against their employer depends on: 
+<br>
+1. Risk of facing negative outcomes, based on rank and political salience of the agency\
+2. Risk tolerance (Kam 2012)
+
+Negative outcomes: authoritarian retaliation, loss of power and wealth after democratization, being prosecuted during transitional justice trials
+
+## Risk of negative outcomes
+
+<div style="display: flex; justify-content: center; align-items: center; height: 40%;">
+|  | High Political Salience | Low Political Salience |
+|:---:|:---:|:---:|
+| **High-rank** | Highest risk | Lower risk |
+| **Low-rank** | Lower risk | Lowest risk |
+</div>
 
 ## Motivation
 
-Whether bureaucrats vote for authoritarians or not matters because (old) evidence suggests that bureaucrats have higher turnout rates
+Whether bureaucrats vote for authoritarians or not matters because authoritarians use semi-competitive elections to legitimize their governments 
 
-Therefore, bureaucrats can shape close elections, and become an important support for democratic outcomes 
+If even the employees of the state do not support authoritarians, we can have hope for the restoration of democracy 
+
 
 ## Hypotheses
 
 1. Alternative incentives:
-State employment does not guarantee support for the incumbent, even under authoritarianism 
+State employment, even under authoritarianism, does not guarantee support for the incumbent
 
 2. Rank-based heterogeneous effects:
-Higher-rank bureaucrats are more likely to vote for the incumbent than lower-rank bureaucrats
-   - They have more to lose after a transition 
+Higher-rank bureaucrats are more likely to vote for the incumbent than lower-rank bureaucrats 
+   - Higher benefits, higher risk
 
 ## Context 
 
 In 1988, there was a plebiscite in Chile asking whether citizens wanted the continuation of the dictatorship or not 
 
-YES - Vote in favor of Pinochet staying\
-NO - Vote to change leaders $\rightarrow$ democratization 
+YES $\rightarrow$  Vote in favor of Pinochet staying\
+NO $\rightarrow$  Vote to change leaders, democratization 
+
+## Context 
 
 With nearly 56%, Pinochet lost and Chile has been a democracy ever since
 
 ::: {style="text-align: center;"}
-![](picture.png){width=70%}
+![](picture.png){width=90%}
 :::
+
 
 ## Data 
 
 1. 1992 census data\
-The census asks municipality of residence in 1987, one year before the plebiscite. It also asks occupation, years of school, and education type.\
-I created municipality-level proportions
+The census asks municipality of residence in 1987, one year before the plebiscite. It also asks occupation, years of school, and education type. I created municipality-level proportions*
 
 2. 1988 municipality-level voting records\
 Municipality-level voting data from the National Electoral Service (SERVEL), as well municipality-level control variables from Bautista el al. (2021) 
 
 ## Analysis 
+
+Controls: Logged distance to regional capital, share of left-wing votes in the latest democratic election (1970), population, share of victims across time relative to 1970 population
 
 I am using OLS regressions with:
 
@@ -72,13 +92,12 @@ I am using OLS regressions with:
 - Province fixed effects
 - CR2 standard errors 
 
-Controls: Logged distance to regional capital, share of left-wing votes in the latest democratic election (1970), population, share of victims across time relative to 1970 population
 
 ## First specification: Bureaucrats
 
 $$ Y_m = \alpha + \beta \text{(Prop. Bureaucrat)}_m + X_m + \lambda_p + \varepsilon_m$$ 
 
-Tests _alternative incentives_: State employment does not guarantee electoral support for the regime 
+Tests _alternative incentives_: State employment, even under authoritarianism, does not guarantee electoral support for the incumbent 
 
 Expectation: The population of bureaucrats in the municipality should have no effect in the dictatorship’s voteshare 
 
@@ -93,14 +112,21 @@ Rank variables based on years of schooling:\
    - Mid-rank: High school or more\
    - Low-rank: Did not start high school
 
-Tests _heterogeneous effects_ $\rightarrow$ Higher-rank bureaucrats are more likely to vote for the incumbent than lower-rank bureaucrats
+## Second specification 
 
-Expectation: The high-rank coefficient should be positive
+::: {style="text-align: center; font-size: 0.85em;"}
+$$Y_m = \alpha + \beta_1(\text{Share High Rank B.})_m + \beta_2(\text{Share Mid Rank B.})_m + X_m + \lambda_p + \varepsilon_m$$
+:::
+
+Tests _heterogeneous effects_: Higher-rank bureaucrats are more likely to vote for the incumbent than lower-rank bureaucrats 
+
+Expectation: The high-rank coefficient should be negative, less support for opposition 
 
 ## Identification 
 
 Relies on conditional ignorability:\
-I assume that conditional on my controls, the _proportion of bureaucrats_ among the municipality population and _the rank-composition of the bureaucracy_ is as if random
+
+I assume that conditional on my controls, the _proportion of bureaucrats_ among the municipality population and the _rank-composition of the bureaucracy_ is as if random
 
 I assume no unmeasured confounding (difficult)\
 - I do sensitivity tests at the end 
@@ -130,33 +156,89 @@ I assume no unmeasured confounding (difficult)\
 ![](plot_second.png){width=70%}
 :::
 
-## Sensitivity tests: Alternative incentives 
+## Heterogenous effects, other specification 
 
 ::: {style="text-align: center;"}
-![](sensitivity_first.png){width=70%}
+![](plot_prop.png){width=70%}
 :::
 
-## Sensitivity tests: Rank-based heterogeneous effects
+## Plotting education and vote share NO  
+
+::: {style="text-align: center;"}
+![](correlation_education_voting.png){width=70%}
+:::
+
+
+## Sensitivity test: Rank-based effects
+
+First specification
+
+| Model | Estimate | SE | Partial R² (D) | RV (sig.) | RV (zero) |
+|:------|:---:|:---:|:---:|:---:|:---:|
+| High-rank bureaucrats | 0.3028 | 0.0765 | 0.0615 | 0.1204 | 0.2253 |
+| Mid-rank bureaucrats | 0.4427 | 0.0972 | 0.0799 | 0.1536 | 0.2544 |
+
+::: {.aside}
+ (Cinelli & Hazlett 2020) RV = robustness value. Partial R²(D): partial R² of the treatment after controls. RV(sig.): confounding needed to eliminate significance at 5%. RV(zero): confounding needed to drive estimate to zero. Models include province fixed effects, weighted by 1987 population.
+:::
+
+
+## Sensitivity test: High-rank bureaucrats
 
 ::: {style="text-align: center;"}
 ![](sensitivity_second.png){width=70%}
 :::
 
+##  Sensitivity test: Mid rank bureaucrats
+
+| Model | Estimate | SE | Partial R² (D) | RV (sig.) | RV (zero) |
+|:------|:---:|:---:|:---:|:---:|:---:|
+| Share among bureaucrats | 0.4427 | 0.0972 | 0.0799 | 0.1536 | 0.2544 |
+| Share of total population | 2.4130 | 0.7616 | 0.0401 | 0.0742 | 0.1847 |
+
+::: {.aside}
+ (Cinelli & Hazlett 2020) RV = robustness value. Partial R²(D): partial R² of the treatment after controls. RV(sig.): confounding needed to eliminate significance at 5%. RV(zero): confounding needed to drive estimate to zero. Models include province fixed effects, weighted by 1987 population.
+:::
+
+## Sensitivity tests: Mid-rank bureaucrats
+
+
+:::: {.columns}
+
+::: {.column width="50%"}
+![](sensitivity_third.png){width=100% fig-align="center"}
+
+::: {style="text-align: center; font-size: 0.8em;"}
+Share among bureaucrats
+:::
+:::
+
+::: {.column width="50%"}
+![](sens_mid_2.png){width=100% fig-align="center"}
+
+::: {style="text-align: center; font-size: 0.8em;"}
+Share of total population
+:::
+:::
+
+::::
 
 ## Problems 
 
 1. Some of my covariates are post-plebiscite 
-2. It's hard to disentangle mechanisms for the difference between ranks. E.g. Higher-rank bureaucrats not only have more to lose, they also have more information
-3. I want to incorporate more behavior literature: risk, sensation seeking
+   - Location data is pre-plebiscite, but occupation data is post-plecisbite 
+   - It's unclear which bureaucrats worked for both governments 
+   - Major issue; I need new data
+2. It's hard to disentangle mechanisms for the difference between ranks\
+3. Bad proxy: The correlation between voting behavior and education is the opposite from the expected one
+
+
 
 ## Questions/feedback
 
 1. What other unmeasured confounders can you think of? 
-2. I really care about the relational side of voting. How do I measure that?
-3. What do you think of the hypotheses? Do the mechanisms make sense? 
-Do they seem to pan out in the cases you’re familiar with? 
-4. What do you think scope conditions are? What do you think of perception of competition as a scope condition? How to measure that? 
-5. Are there any ways to improve my paper you can think of with the data limitations I have today? 
+2. What do you think of the hypotheses? Do they seem to pan out in the cases you’re familiar with? 
+3. Are there any ways to improve my paper with the data limitations I have today? 
 
 ## What I would like to do next
 
@@ -166,8 +248,6 @@ To do so → Randomized response technique
 
 The respondent throws a dice and is instructed: answer “yes” if the dice rolls 1, “no” if the dice rolls 6, the truth if the dice rolls 2, 3, or 4 
 
-Probabilistically I would be able to subtract the proportion of the responses that come from 2, 3, of 4 and uncover real answers 
-
 The problems are sampling and social desirability bias
 
 
@@ -175,31 +255,25 @@ The problems are sampling and social desirability bias
 
 ## Extras
 
-## Balance table 
+## Summary statistics
 
 ::: {style="text-align: center;"}
-![](balance_table.png){width=70%}
+![](balance_table.png){width=50%}
 :::
 
-## Heterogenous effects, other specification 
-
-::: {style="text-align: center;"}
-![](plot_prop.png){width=70%}
-:::
-
-##
+## Bureaucrat rank share by municipality
 
 ::: {style="text-align: center;"}
 ![](rank_by_municipality.png){width=70%}
 :::
 
-##
+## Distribution of years of schooling
 
 ::: {style="text-align: center;"}
 ![](yos_distribution.png){width=70%}
 :::
 
-##
+## Distribution of bureaucrat share by education level
 
 ::: {style="text-align: center;"}
 ![](distribution.png){width=70%}
