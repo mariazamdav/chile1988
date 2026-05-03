@@ -82,13 +82,13 @@ I assume no unmeasured confounding (difficult)\
 
 ## Analysis 
 
-Controls: Logged distance to regional capital, share of left-wing votes in the latest democratic election (1970), population, share of victims across time relative to 1970 population
-
 I am using OLS regressions with:
 
 - Weights by municipality population
 - Province fixed effects
 - CR2 standard errors 
+
+Controls: Logged distance to regional capital, share of left-wing votes in the latest democratic election (1970), population, share of victims across time relative to 1970 population
 
 
 ## First specification: Bureaucrats
@@ -152,7 +152,7 @@ Expectation: The high-rank coefficient should be negative, less support for oppo
 ![](plot_prop.png){width=70%}
 :::
 
-## Plotting education and vote share "No"  
+## Mean years of schooling and vote share "No"  
 
 ::: {style="text-align: center;"}
 ![](education_pattern.png){width=70%}
