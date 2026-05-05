@@ -86,9 +86,9 @@ I am using OLS regressions with:
 
 - Weights by municipality population
 - Province fixed effects
-- CR2 standard errors 
+- CR2 standard errors at the province level
 
-Controls: Logged distance to regional capital, share of left-wing votes in the latest democratic election (1970), population, share of victims across time relative to 1970 population
+Controls: Logged distance to regional capital, share of left-wing votes in the latest democratic election (1970), population, share of victims across time relative to 1970 population, share of rural population (only in first specification)
 
 
 ## First specification: Bureaucrats
@@ -105,10 +105,9 @@ Expectation: The population of bureaucrats in the municipality should have no ef
 $$Y_m = \alpha + \beta_1(\text{Share High Rank B.})_m + \beta_2(\text{Share Mid Rank B.})_m + X_m + \lambda_p + \varepsilon_m$$
 :::
 
-Rank variables based on years of schooling:\
-   - High-rank: College or more\
-   - Mid-rank: High school or more\
-   - Low-rank: Did not start high school
+Tests _heterogeneous effects_: Higher-rank bureaucrats are more likely to vote for the incumbent than lower-rank bureaucrats 
+
+Expectation: The high-rank coefficient should be negative, less support for opposition 
 
 ## Second specification 
 
@@ -116,10 +115,10 @@ Rank variables based on years of schooling:\
 $$Y_m = \alpha + \beta_1(\text{Share High Rank B.})_m + \beta_2(\text{Share Mid Rank B.})_m + X_m + \lambda_p + \varepsilon_m$$
 :::
 
-Tests _heterogeneous effects_: Higher-rank bureaucrats are more likely to vote for the incumbent than lower-rank bureaucrats 
-
-Expectation: The high-rank coefficient should be negative, less support for opposition 
-
+Rank variables based on years of schooling:\
+   - High-rank: College or more\
+   - Mid-rank: High school or more\
+   - Low-rank: Did not start high school
 
 ## Results of both hypotheses 
 
@@ -164,7 +163,7 @@ Expectation: The high-rank coefficient should be negative, less support for oppo
 Rank proportion per municipality
 
 
-::: {style="display: flex; align-items: center; height: 60%;"}
+::: {style="display: flex; align-items: center; height: 40%;"}
 | Model | Estimate | SE | Partial R² (D) | RV (sig.) | RV (zero) |
 |:------|:---:|:---:|:---:|:---:|:---:|
 | High-rank bureaucrats | 0.3028 | 0.0765 | 0.0615 | 0.1204 | 0.2253 |
@@ -172,14 +171,15 @@ Rank proportion per municipality
 :::
 
 ::: {.aside}
- (Cinelli & Hazlett 2020) 
+RV (sig.) interpretation: "A confounder associated with both treatment and outcome explaining more than X% of residual variance in each would turn the estimate insignificant."\
+(Cinelli & Hazlett 2020)
 :::
 
 
 ##  Sensitivity test: Mid rank bureaucrats 
 
 
-::: {style="display: flex; align-items: center; height: 60%;"}
+::: {style="display: flex; align-items: center; height: 40%;"}
 | Model | Estimate | SE | Partial R² (D) | RV (sig.) | RV (zero) |
 |:------|:---:|:---:|:---:|:---:|:---:|
 | Share among bureaucrats | 0.4427 | 0.0972 | 0.0799 | 0.1536 | 0.2544 |
@@ -221,6 +221,11 @@ The problems are sampling and social desirability bias
 ## Thanks! 
 
 ## Extras
+
+- Summary statistics
+- Bureaucrat rank share by municipality
+- Distribution of years of schooling
+- Distribution of bureaucrat share by education level
 
 ## Summary statistics
 
