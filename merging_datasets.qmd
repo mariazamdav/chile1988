@@ -39,7 +39,7 @@ Chilenos_Censo_1987 <-Personas_Censo_1992 %>%
 VotingData_Dataverse <- read_dta("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/FinalDatasetForReplication.dta",
 col_select = c(comuna, IDProv, VoteShareNo, shvictimas_until74_70, 
 shvictimas_75_plus_70, lnDistRegCapital, share_allende70, DMilitaryPresence, 
-longitud, latitud, sh_rural_70, share_aylwin89))
+longitud, latitud, sh_rural_70, share_aylwin89, sh_educ_12more))
 
 # Read shapefile for geometry 
 Comunas_Dataverse <- st_read("C:/Users/mlzam/OneDrive/Documents/Files/MIT/spring 26/quant 2/chile1988/dataverse_files (3)/Paper Replication/Data/Map/cl_comunas_geo/Paper Replication/Data/Map/cl_comunas_geo.shp",
@@ -1384,4 +1384,148 @@ ggplot(df_plot, aes(x = sh_rural_70, y = VoteShareNo)) +
   theme_minimal(base_size = 12) +
   theme(legend.position = "bottom",
         plot.title.position = "plot")
+```
+
+
+```{r}
+## -----------------------------------------------------------------------------
+# POPULATION-LEVEL EDUCATION AS COVARIATE
+## -----------------------------------------------------------------------------
+
+# Education proportions for the whole population (not just bureaucrats)
+prop_rango_pop <- Chilenos_Censo_1987 %>%
+  group_by(Comuna_1987_Origen3) %>%
+  summarise(
+    prop_high_pop = as.numeric(mean(rango == "high", na.rm = TRUE)) * 100,
+    prop_mid_pop  = as.numeric(mean(rango == "mid",  na.rm = TRUE)) * 100,
+    prop_low_pop  = as.numeric(mean(rango == "low",  na.rm = TRUE)) * 100
+  )
+
+# Join into voting data
+VotingData_Dataverse <- VotingData_Dataverse %>%
+  mutate(ID_2002_num = as.numeric(ID_2002)) %>%
+  left_join(prop_rango_pop, by = c("ID_2002_num" = "Comuna_1987_Origen3")) %>%
+  select(-ID_2002_num)
+
+## -----------------------------------------------------------------------------
+# REGRESSIONS — adding prop_high_pop and prop_mid_pop as covariates
+## -----------------------------------------------------------------------------
+
+# Model 1: prop_burocrata + population education
+first_edu <- lm_robust(
+  data = VotingData_Dataverse,
+  formula = VoteShareNo ~ prop_burocrata + prop_high_pop + prop_mid_pop +
+    sh_victims_total + lnDistRegCapital + share_allende70 + pop_1987 +
+    sh_rural_70 + factor(IDProv),
+  se_type = "CR2", clusters = IDProv, weights = pop_1987
+)
+
+# Model 2: rank composition + population education
+second_edu <- lm_robust(
+  data = VotingData_Dataverse,
+  formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro +
+    prop_high_pop + prop_mid_pop + sh_victims_total + lnDistRegCapital +
+    share_allende70 + pop_1987 + factor(IDProv),
+  se_type = "CR2", clusters = IDProv, weights = pop_1987
+)
+
+## -----------------------------------------------------------------------------
+# GRAPHS
+## -----------------------------------------------------------------------------
+
+# Plot 1: Model 1 with vs. without population education
+controls_1 <- c("pop_1987", "lnDistRegCapital", "share_allende70",
+                "sh_victims_total", "sh_rural_70")
+
+term_labels_1 <- c(
+  "prop_burocrata"   = "Bureaucrats per municipality",
+  "prop_high_pop"    = "High-education population share",
+  "prop_mid_pop"     = "Mid-education population share",
+  "sh_victims_total" = "Total victims / Pop. 1970",
+  "share_allende70"  = "Allende vote share 1970",
+  "lnDistRegCapital" = "Ln distance to regional capital",
+  "pop_1987"         = "Population 1987",
+  "sh_rural_70"      = "Share rural population"
+)
+
+term_order_1 <- c("pop_1987", "lnDistRegCapital", "sh_rural_70", "share_allende70",
+                  "sh_victims_total", "prop_mid_pop", "prop_high_pop",
+                  "prop_burocrata")
+
+bind_rows(
+  tidy_model(first,     "Original",            c("prop_burocrata", controls_1)),
+  tidy_model(first_edu, "With Pop. Education", c("prop_burocrata", "prop_high_pop",
+                                                  "prop_mid_pop", controls_1))
+) %>%
+  ggplot(aes(x = estimate, y = factor(term, levels = term_order_1),
+             color = model)) +
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.2, position = position_dodge(width = 0.5)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  scale_y_discrete(labels = term_labels_1) +
+  labs(title = "Model 1: Bureaucrat Share vs Vote Share No (with pop. education)",
+       x = "Estimate (95% CI)", y = NULL, color = NULL) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Plot 2: Model 2 with vs. without population education
+controls_2 <- c("pop_1987", "lnDistRegCapital", "share_allende70", "sh_victims_total")
+
+term_labels_2 <- c(
+  "share_high_among_buro" = "High rank",
+  "share_mid_among_buro"  = "Mid rank",
+  "prop_high_pop"         = "High-education population share",
+  "prop_mid_pop"          = "Mid-education population share",
+  "pop_1987"              = "Population 1987",
+  "lnDistRegCapital"      = "Ln distance to reg. cap.",
+  "share_allende70"       = "Allende vote share 1970",
+  "sh_victims_total"      = "Total victims / Pop. 1970"
+)
+
+term_order_2 <- c("pop_1987", "lnDistRegCapital", "share_allende70",
+                  "sh_victims_total", "prop_mid_pop", "prop_high_pop",
+                  "share_mid_among_buro", "share_high_among_buro")
+
+bind_rows(
+  tidy_model(second,     "Original",            c("share_high_among_buro",
+                                                  "share_mid_among_buro",
+                                                  controls_2)),
+  tidy_model(second_edu, "With Pop. Education", c("share_high_among_buro",
+                                                  "share_mid_among_buro",
+                                                  "prop_high_pop", "prop_mid_pop",
+                                                  controls_2))
+) %>%
+  ggplot(aes(x = estimate, y = factor(term, levels = term_order_2),
+             color = model)) +
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.2, position = position_dodge(width = 0.5)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  scale_y_discrete(labels = term_labels_2) +
+  labs(title = "Model 2: Bureaucrat Rank Composition vs Vote Share No (with pop. education)",
+       x = "Estimate (95% CI)", y = NULL, color = NULL) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+## -----------------------------------------------------------------------------
+# MODEL TABLE
+## -----------------------------------------------------------------------------
+
+modelsummary(
+  list("(1) Model 1"          = first,
+       "(2) Model 1 + Pop Ed" = first_edu,
+       "(3) Model 2"          = second,
+       "(4) Model 2 + Pop Ed" = second_edu),
+  coef_map = c(
+    "prop_burocrata"        = "Proportion of bureaucrats",
+    "share_high_among_buro" = "High rank share",
+    "share_mid_among_buro"  = "Mid rank share",
+    "prop_high_pop"         = "High-education pop. share",
+    "prop_mid_pop"          = "Mid-education pop. share"
+  ),
+  gof_map = c("nobs", "r.squared", "std.errors"),
+  fmt = 4,
+  output = "table_with_pop_education.png"
+)
 ```
