@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "Code for final Quant 2."
 format: html
 ---
 
@@ -18,11 +18,16 @@ library(sensemakr)
 library(webshot2)
 ```
 
+
+# Preparing the data 
+
 ```{r}
 
+# ------------------------------------------------------------------------------
 # CENSUS DATA 
+# ------------------------------------------------------------------------------
 
-# Getting people data
+# Data by individual 
 Personas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/PERSONA.sav",
  col_select = c(Comuna_1987_Origen3, Tipo_educacion, Curso, Rama_actividad,
   Ocupacion))
@@ -32,10 +37,11 @@ Chilenos_Censo_1987 <-Personas_Censo_1992 %>%
   filter(Comuna_1987_Origen3 >= 1101 & Comuna_1987_Origen3 <= 13605, 
          Comuna_1987_Origen3 %% 100 != 0)
 
+# ------------------------------------------------------------------------------
 # DATA FROM THE PAPER REPLICATION 
+# ------------------------------------------------------------------------------
 
 # Voting data by municipality
-
 VotingData_Dataverse <- read_dta("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/FinalDatasetForReplication.dta",
 col_select = c(comuna, IDProv, VoteShareNo, shvictimas_until74_70, 
 shvictimas_75_plus_70, lnDistRegCapital, share_allende70, DMilitaryPresence, 
@@ -45,19 +51,24 @@ longitud, latitud, sh_rural_70, share_aylwin89, sh_educ_12more))
 Comunas_Dataverse <- st_read("C:/Users/mlzam/OneDrive/Documents/Files/MIT/spring 26/quant 2/chile1988/dataverse_files (3)/Paper Replication/Data/Map/cl_comunas_geo/Paper Replication/Data/Map/cl_comunas_geo.shp",
 query = "SELECT ID_2002, NOMBRE FROM cl_comunas_geo")
 
-# municipality codes from 1992 census 
+# Municipality codes from 1992 census 
 Comunas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/COMUNAS.sav",
   col_select = c(Codigo, Nombre))
 
+# ------------------------------------------------------------------------------
 ```
 
 
 ```{r}
 
+# ------------------------------------------------------------------------------
 # Prepping the data 
-
-# First, I am finding each municipality's numerical ID and attaching it to the 
+# ------------------------------------------------------------------------------
+# First, find each municipality's numerical ID and attach it to the 
 # municipality voting data 
+# ------------------------------------------------------------------------------
+# The municipalities file comes in polygon shape
+# Do some conversions to match both databases 
 
 # Convert Dataverse voting data to spatial object using lat/lon columns
 Dataverse_temp <- VotingData_Dataverse |>
@@ -69,12 +80,12 @@ sf_use_s2(FALSE)
 # Fix any invalid polygon geometries in the shapefile before joining
 Comunas_Dataverse <- st_make_valid(Comunas_Dataverse)
 
-# Spatial join: for each voting data point, find which comuna polygon 
+# Spatial join: for each voting data point, find which municipality polygon 
 # it falls inside and attach that comuna's ID_2002 and name
 crosswalk <- st_join(Dataverse_temp, Comunas_Dataverse |>
   select(ID_2002, NOMBRE)) |>
-  st_drop_geometry() |>    # drop geometry, no longer needed
-  select(comuna, ID_2002, NOMBRE)  # keep only the three columns we need
+  st_drop_geometry() |>    # Drop geometry, no longer needed
+  select(comuna, ID_2002, NOMBRE)  # Keep only the three columns I need
 
 # Fix NAs manually, then drop unresolvable ones
 crosswalk <- crosswalk |>
@@ -108,49 +119,50 @@ crosswalk <- crosswalk |>
 VotingData_Dataverse <- VotingData_Dataverse |>
   left_join(crosswalk, by = "comuna")
 
+# ------------------------------------------------------------------------------
+
 ```
 
 
 ```{r}
-# Sanity check: verify that ID_2002 codes from the shapefile 
-# match the Codigo codes in the 1992 census
 
-# Step 1: randomly sample 10 comuna codes from the shapefile
+# ------------------------------------------------------------------------------
+# Sanity check: Verify that ID_2002 codes from the shapefile 
+# match the codes in the 1992 census
+# ------------------------------------------------------------------------------
+
+# Step 1: Randomly sample 10 comuna codes from the shapefile
 sample_ids <- Comunas_Dataverse |> st_drop_geometry() |> 
   slice_sample(n = 10) |> pull(ID_2002)
 
-# Step 2: look up those 10 codes in the shapefile
+# Step 2: Look up those 10 codes in the shapefile
 # Shows what names the shapefile assigns them
 Comunas_Dataverse |> st_drop_geometry() |> 
   filter(ID_2002 %in% sample_ids) |> select(ID_2002, NOMBRE)
 
-# Step 3: look up those same 10 codes in the census
+# Step 3: Look up those same 10 codes in the census
 # If names match, the coding systems are the same
 Comunas_Censo_1992 |> filter(Codigo %in% sample_ids) |> select(Codigo, Nombre)
 
-
-# Done with finding the ID from the replication data 
-
+# ------------------------------------------------------------------------------
 ```
 
 ```{r}
+# ------------------------------------------------------------------------------
+# Creating variables for analysis
+# ------------------------------------------------------------------------------
 
-# Now working on census data 
-# First, I must create the municipality level data from the individual observations 
-
-# Creating the education range variable from people data
-
-# Calculating their years of schooling 
+# Years of schooling
 
 Chilenos_Censo_1987 <- Chilenos_Censo_1987 %>%
   mutate(years_schooling = case_when(
-    Tipo_educacion %in% 0:1  ~ 0,           # Never attended or kinder
-    Tipo_educacion == 2      ~ Curso,        # Básica: years 1-8
-    Tipo_educacion %in% 3:11 ~ 8 + Curso,   # All media types + Normal
-    Tipo_educacion %in% 12:14 ~ 12 + Curso  # CFT, IP, Universidad
+    Tipo_educacion %in% 0:1  ~ 0,          # Never attended or kinder
+    Tipo_educacion == 2      ~ Curso,      # Middle/elementary school
+    Tipo_educacion %in% 3:11 ~ 8 + Curso,  # All high school types
+    Tipo_educacion %in% 12:14 ~ 12 + Curso # College and related
   ))
 
-# Placing them in categorical rank variables based on years of schooling 
+# Separating years of schooling into categories
 
 Chilenos_Censo_1987 <- Chilenos_Censo_1987 %>%
   mutate(rango = case_when(
@@ -159,8 +171,9 @@ Chilenos_Censo_1987 <- Chilenos_Censo_1987 %>%
     years_schooling <= 8               ~ "low"
   ))
 
-
-# Creating a bureaucrat dummy variable  
+# ------------------------------------------------------------------------------
+# Separating bureaucrats
+# ------------------------------------------------------------------------------
 
 Chilenos_Censo_1987 <- Chilenos_Censo_1987 %>%
   mutate(burocrata = 
@@ -171,12 +184,12 @@ Chilenos_Censo_1987 <- Chilenos_Censo_1987 %>%
     ) |
     Ocupacion %in% c(
       # Military & police
-      110,   # Armed forces, Carabineros, Investigations
-      5162,  # Carabineros
+      110,   # Armed forces, Police, Investigations
+      5162,  # Police
       5163,  # Prison guards
 
       # Executive, legislative, public admin
-      1100,  # Members of executive/legislative and public admin
+      1100,  # Members of executive/legislative and public administration
       1110,  # Members of executive and legislative powers
       1120,  # Senior public administration officials
       1130,  # Heads of small communities
@@ -198,7 +211,7 @@ Chilenos_Censo_1987 <- Chilenos_Censo_1987 %>%
       2350,  # Other education professionals
       2351,  # Pedagogical methods specialists
       2352,  # General education inspectors
-      3310,  # Higher ed teaching assistants and secondary paradocentes
+      3310,  # Higher ed teaching assistants and secondary para-teachers
       3311,  # Higher education teaching assistants
       3312,  # Secondary teaching assistants
       3320,  # Primary and preschool teaching assistants
@@ -235,60 +248,43 @@ Chilenos_Censo_1987 <- Chilenos_Censo_1987 %>%
   )
 
 # ------------------------------------------------------------------------------
+# MUNICIPALITY LEVEL VARIABLES  
+# ------------------------------------------------------------------------------
 
-# Creating the municipality level variables 
-
-# Proportion of bureaucrats per municipality
+# Proportion of bureaucrats per municipality, proportion of bureaucrats 
+# per rank per municipality, and population per municipality 
 prop_burocrata <- Chilenos_Censo_1987 %>%
   group_by(Comuna_1987_Origen3) %>%
-  summarise(prop_burocrata = as.numeric(mean(burocrata, na.rm = TRUE)))
-
-# Proportion of bureaucrats per rango per comuna
-prop_rango <- Chilenos_Censo_1987 %>%
-  group_by(Comuna_1987_Origen3) %>%
-  summarise(
+  summarise(prop_burocrata = as.numeric(mean(burocrata, na.rm = TRUE)),
     prop_high = as.numeric(mean(burocrata & rango == "high", na.rm = TRUE)),
     prop_mid  = as.numeric(mean(burocrata & rango == "mid",  na.rm = TRUE)),
-    prop_low  = as.numeric(mean(burocrata & rango == "low",  na.rm = TRUE))
+    prop_low  = as.numeric(mean(burocrata & rango == "low",  na.rm = TRUE)),
+    pop_1987  = n()
   )
-
-# Getting population data from closer to the plebiscite 
-pop_1987 <- Chilenos_Censo_1987 %>%
-  group_by(Comuna_1987_Origen3) %>%
-  summarise(pop_1987 = n())
 
 # Joining the municipality level variables to the voting data databases 
 VotingData_Dataverse <- VotingData_Dataverse %>%
   mutate(ID_2002_num = as.numeric(ID_2002)) %>%
   left_join(prop_burocrata, by = c("ID_2002_num" = "Comuna_1987_Origen3")) %>%
-  left_join(prop_rango,     by = c("ID_2002_num" = "Comuna_1987_Origen3")) %>%
-  left_join(pop_1987,       by = c("ID_2002_num" = "Comuna_1987_Origen3")) %>%
   select(-ID_2002_num) %>%
+# Rescaling variables for interpretation 
   mutate(
     sh_victims_total = (shvictimas_until74_70 + shvictimas_75_plus_70),
         prop_burocrata = prop_burocrata * 100,
         prop_high      = prop_high * 100,
         prop_mid       = prop_mid  * 100,
         prop_low       = prop_low  * 100,
+# Creating share of ranks among bureaucrats per municipality 
         sh_rural_70 = sh_rural_70 * 100) %>%
     mutate(share_high_among_buro = (prop_high / prop_burocrata) *100,
     share_mid_among_buro  = (prop_mid  / prop_burocrata) *100)
-  
 
+# ------------------------------------------------------------------------------
 ```
 
-## Regressions 
+# Analyses 
 
 ```{r}
-
-tidy_model <- function(model, model_name, keep_terms) {
-  as.data.frame(summary(model)$coefficients) %>%
-    tibble::rownames_to_column("term") %>%
-    rename(estimate = Estimate, se = `Std. Error`, ci_low = `CI Lower`, 
-    ci_high = `CI Upper`) %>%
-    filter(term %in% keep_terms) %>%
-    mutate(model = model_name)
-}
 
 ## -----------------------------------------------------------------------------
 # REGRESSIONS 
@@ -888,18 +884,10 @@ REPEATING FOR VOTES FOR AYLWIN
 
 
 ```{r}
-tidy_model <- function(model, model_name, keep_terms) {
-  as.data.frame(summary(model)$coefficients) %>%
-    tibble::rownames_to_column("term") %>%
-    rename(estimate = Estimate, se = `Std. Error`, ci_low = `CI Lower`, 
-    ci_high = `CI Upper`) %>%
-    filter(term %in% keep_terms) %>%
-    mutate(model = model_name)
-}
 
-## -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # REGRESSIONS 
-## -----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 
 first_nocontrols <- lm_robust(data = VotingData_Dataverse, 
 formula = share_aylwin89 ~ prop_burocrata + factor(IDProv), se_type = "CR2",
@@ -910,9 +898,9 @@ formula = share_aylwin89 ~ prop_burocrata + sh_victims_total +
   lnDistRegCapital + share_allende70 + pop_1987 + sh_rural_70 + factor(IDProv), 
   se_type = "CR2", clusters = IDProv, weights = pop_1987)
 
-## -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # GRAPHS 
-## -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 controls <- c("pop_1987", "lnDistRegCapital", "share_allende70", 
 "sh_victims_total", "sh_rural_70")
@@ -1528,4 +1516,16 @@ modelsummary(
   fmt = 4,
   output = "table_with_pop_education.png"
 )
+```
+
+
+```{r}
+tidy_model <- function(model, model_name, keep_terms) {
+  as.data.frame(summary(model)$coefficients) %>%
+    tibble::rownames_to_column("term") %>%
+    rename(estimate = Estimate, se = `Std. Error`, ci_low = `CI Lower`, 
+    ci_high = `CI Upper`) %>%
+    filter(term %in% keep_terms) %>%
+    mutate(model = model_name)
+}
 ```
