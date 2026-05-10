@@ -5,6 +5,7 @@
 *.sav
 *.logdata/
 data/
+.vdoc.*
 
 # Quarto outputs
 *.html
