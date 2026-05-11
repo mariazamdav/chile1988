@@ -75,21 +75,27 @@ I use OLS regressions with weights per municipality population, province fixed e
 
 To evaluate whether state employment is correlated with electoral support for the authoritarian, I use the following specification:
 
-$$Y_m = \alpha + \beta \, \text{Proportion of bureaucrats}_m +  \mathbf{X}_m'\gamma + \phi_p + \varepsilon_m$$ 
+$$Y_m = \alpha + \beta \, \delta_m +  \mathbf{X}_m' \gamma + \phi_p + \varepsilon_m$$ 
 
-To evaluate whether the rank has any effect on electoral support for the authoritarian, I run two specifications. In the first, the independent variable of interest is the municipality share of high- and mid-level bureaucrats \textit{out of all bureaucrats}, $\theta_m^{high-rank}$ and $\theta_m^{mid-rank}$ respectively. 
+Where $\delta_m$ represents the proportion of bureaucrats out of the municipal population. $\mathbf{X}_m'$ represents all the controls mentioned previously, $\phi_p$ represents province-level fixed effects, and $\varepsilon_m$ represents the error. 
 
+
+To evaluate whether the rank has any effect on electoral support for the authoritarian, I run two specifications. In the first, the independent variable of interest is the municipality share of high- and mid-level bureaucrats \textit{out of all bureaucrats}. 
 $$Y_m = \alpha + \beta_1 \, \theta_m^{high-rank} + \beta_2 \, \theta_m^{mid-rank} + \mathbf{X}_m'\gamma + \phi_p + \varepsilon_m$$ 
 
-I run a second specification in which independent variable of interest is the municipality share of high- and mid-level bureaucrats \textit{out of the population}, $\delta_m^{high-rank}$ and $\delta_m^{mid-rank}$ respectively. 
+Where $\theta_m^{high-rank}$ is the municipal share of high rank bureaucrats out of all bureaucrats and $\theta_m^{mid-rank}$ is the municipal share of mid rank bureaucrats out of all bureaucrats. The ommitted and reference category is the municipal share of low rank bureaucrats out of all bureaucrats. 
 
+I run a second specification in which independent variable of interest is the municipality share of high- and mid-level bureaucrats \textit{out of the population}, $\delta_m^{high-rank}$ and $\delta_m^{mid-rank}$ respectively. 
 $$Y_m = \alpha + \beta_1 \, \delta_m^{high-rank} + \beta_2 \, \delta_m^{mid-rank} +  + \mathbf{X}_m'\gamma + \phi_p + \varepsilon_m$$ 
 
- 
+Where $\delta_m^{high-rank}$ is the share of high rank bureaucrats out of municipal population and $\delta_m^{mid-rank}$  is the share of middle rank bureaucrats out of municipal population. The ommitted and reference category is the share of low rank bureaucrats out of municipal population. 
 
 \begin{center}
 \large\textbf{Empirical results}
 \end{center}
+
+
+
 
 \begin{center}
 \large\textbf{Conclusion}

@@ -467,7 +467,7 @@ formula = VoteShareNo ~ prop_high + prop_mid + factor(IDProv),
 clusters = IDProv, weights = pop_1987)
 
 second_prop <- lm_robust(data = VotingData_Dataverse, 
-formula = VoteShareNo ~ prop_high + prop_mid + DMilitaryPresence + 
+formula = VoteShareNo ~ prop_high + prop_mid + sh_victims_total + 
   lnDistRegCapital + share_allende70 + pop_1987 + mean_years_pop + 
   factor(IDProv), 
   clusters = IDProv, weights = pop_1987)
@@ -562,6 +562,69 @@ bind_rows(
 
 # ------------------------------------------------------------------------------
 ```
+
+Showing all results together: 
+```{r}
+# ── REGRESSION TABLE ──────────────────────────────────────────────────────────
+
+coef_map <- c(
+  "prop_burocrata"        = "Bureaucrat share",
+  "share_high_among_buro" = "High-rank share (among bureaucrats)",
+  "share_mid_among_buro"  = "Mid-rank share (among bureaucrats)",
+  "prop_high"             = "High-rank share (per municipality pop.)",
+  "prop_mid"              = "Mid-rank share (per municipality pop.)",
+  "sh_victims_total"      = "Total victims / pop. 1970",
+  "share_allende70"       = "Allende vote share 1970",
+  "lnDistRegCapital"      = "Ln distance to regional capital",
+  "pop_1987"              = "Population 1987",
+  "sh_rural_70"           = "Rural share 1970",
+  "mean_years_pop"        = "Mean years of schooling"
+)
+
+gof_map <- tribble(
+  ~raw,        ~clean,  ~fmt,
+  "nobs",      "N",     0,
+  "r.squared", "R²",    3
+)
+
+modelsummary(
+  list(
+    "(1)" = first_nocontrols, "(2)" = first,
+    "(3)" = second_nocontrols, "(4)" = second,
+    "(5)" = second_nocontrols_prop, "(6)" = second_prop
+  ),
+  coef_map = coef_map,
+  gof_map  = gof_map,
+  stars    = c("*" = .1, "**" = .05, "***" = .01),
+  fmt      = 4,
+  output   = "kableExtra",
+  booktabs = TRUE,
+  title    = "Bureaucratic Composition and the No Vote Share, 1988 Plebiscite"
+) |>
+  add_header_above(c(
+    " "                                          = 1,
+    "Spec. 1: Bureaucrat share"                  = 2,
+    "Spec. 2: Rank share (among bureaucrats)"    = 2,
+    "Spec. 3: Rank share (per municipality pop.)"= 2
+  )) |>
+  add_header_above(c(
+    " "           = 1,
+    "No controls" = 1, "Controls" = 1,
+    "No controls" = 1, "Controls" = 1,
+    "No controls" = 1, "Controls" = 1
+  )) |>
+  footnote(
+    general = "Province fixed effects included in all models. Standard errors clustered at province level (CR2). Observations weighted by 1987 municipality population. Controls: total victims/pop. 1970, Allende vote share 1970, ln distance to regional capital, population 1987, rural share 1970, mean years of schooling.",
+    general_title     = "Note:",
+    footnote_as_chunk = TRUE,
+    threeparttable    = TRUE
+  ) |>
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"),
+    font_size     = 9
+  )
+```
+
 
 Robustness checks: 
 
