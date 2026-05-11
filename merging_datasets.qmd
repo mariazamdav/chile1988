@@ -47,7 +47,7 @@ Chilenos_Censo_1987 <-Personas_Censo_1992 %>%
 # Voting data by municipality
 VotingData_Dataverse <- read_dta("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/FinalDatasetForReplication.dta",
 col_select = c(comuna, IDProv, VoteShareNo, shvictimas_until74_70, 
-shvictimas_75_plus_70, lnDistRegCapital, share_allende70, DMilitaryPresence, 
+shvictimas_75_plus_70, lnDistRegCapital, share_allende70,
 longitud, latitud, sh_rural_70, share_aylwin89, sh_educ_12more))
 
 # Read shapefile for geometry 
@@ -196,7 +196,6 @@ Chilenos_Censo_1987 <- Chilenos_Censo_1987 %>%
       1130,  # Heads of small communities
 
       # Legal system
-      2421,  # Lawyers
       2422,  # Judges
       2429,  # Legal professionals (except lawyers and judges)
       3432,  # Legal technical assistants

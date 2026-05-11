@@ -1,0 +1,98 @@
+---
+title: "Do bureaucrats vote for the dictatorships that employ them?"
+author: "Maria Zambrano Davila"
+format:
+  pdf:
+    documentclass: article
+    fontsize: 12pt
+    geometry:
+      - margin=1in
+    linestretch: 2
+    number-sections: false
+    colorlinks: false
+header-includes: |
+  \usepackage{setspace}
+  \usepackage{newtxtext}
+  \setlength{\parindent}{0.5in}
+  \setlength{\parskip}{0pt}
+---
+
+\begin{center}
+\large\textbf{Introduction}
+\end{center}
+
+Occasionally, authoritarian regimes hold semi-competitive elections, often to seek benefits such as legitimacy () or internal stability (). As a voting base, bureaucrats are relatively easier to coerce because they depend on the state for their livelihood. A simplistic understanding of the bureaucrats would lead us to believe that no state worker would risk voting against their authoritarian employer out of fear of losing their job. However, not all bureaucrats are created equal. I argue that bureaucrats’ political behavior, otherwise similar to that of nonbureaucrats, is moderated by two interacting characteristics: their risk of negative outcomes, determined by their rank and the political salience of their organization, and their level of risk tolerance. Due to data limitations, I focus this paper on evaluating the rank mechanism. 
+
+In terms of rank, higher rank bureaucrats receive the most benefits from the regime: they are more likely to receive higher wages and government rents, both through legitimate and illegitimate sources. They also have the most to lose out of democratization: not only do they risk losing their positions in the state and the related benefits, but their high visibility also makes them prime targets for transitional justice trials. Instead, lower-rank bureaucrats receive less rents from the regime, hold less influence, and are less visible to those seeking transitional justice. As a consequence, my theory generates two hypotheses. First, state employment does not guarantee electoral support of the incumbent. Second, higher-rank bureaucrats are more likely to support their authoritarian employer. In this paper, I evaluate my hypotheses through municipality level voting and census data regarding the 1988 Chilean plebiscite,resulted in the transition out of the Pinochet dictatorship. 
+
+\begin{center}
+\large\textbf{Theory and Research Questions}
+\end{center}
+\textbf{H1:} State employment does not guarantee support for the incumbent at the individual level. 
+
+
+\textbf{H1:}Higher rank bureaucrats are less likely to vote against the authoritarian than lower rank bureaucrats. 
+
+\begin{center}
+\large\textbf{Data}
+\end{center}
+
+\textbf{1. 1992 census data}
+
+I obtained individual level data from the 1992 census, which allowed me to compute municipality level means and proportions. I used the following variables from this database: 
+
+\noindent \textbf{Municipality of residence in 1987:}  Per standard practice, the Chilean census includes the place of residence in the temporal mid-point between the two most recent censuses. Given that these occur every 10 years, the 1992 census includes place of residence in 1987, a year before the 1988 plebiscite. 
+
+\noindent \textbf{Work:}  To separate bureaucrats from the rest of citizens, I filter by branch and occupation. Branch indicates the general sector a person works in. From branch, I filter out people who work for public administration and defense, education, and adult education and other types. While not all education in Chile is private, the wide majority is. I expect the error created from the inclusion of private education workers to be negligible. Occupation indicates the specific title that a person marks as a description for their work. Examples are police, lawyers, and preschool teachers. 
+
+\noindent \textbf{Education:}  I use education as a proxy for rank, out of the assumption that higher-rank bureaucrats are also the most highly educated. This assumption comes from substantive knowledge that Pinochet was well-known for including highly-educated technocrats in the highest positions in government. 
+
+To separate bureaucrats in higher, middle, and lower rank, I create a years of schooling variable. Years of schooling adds up the census’ education type (e.g. kinder, high school, college) and last year approved (e.g. first, third, eighth) variables from the database in order to calculate how many years of schooling each individual completed. 
+
+\textbf{2. 1988 county-level voting records}
+
+Bautista et al. (2021) evaluated the relationship between repression and municipality level voting outcomes from the 1988 plebiscite. From their replication data, I obtained municipality level data on opposition vote shares, logged distance between the municipalities and their regional capital, rural population share, population share of victims relative to the 1970 population, vote share of the president who Pinochet ousted, voting outcomes for the democratic presidential candidate for first elections after Pinochet in 1989, and region that each municipality belongs to.
+
+\begin{center}
+\textbf{Variables I created from the data}
+\end{center}
+
+To carry out municipality level analyses, I used individual level data to create the following municipality level variables: average years of schooling, proportion of bureaucrats, proportion of higher, middle, and lower rank bureaucrats. 
+
+\noindent \textbf{Rank assignment:}  I assigned higher rank to bureaucrats with a high school education or more, middle rank who completed primary school, and lower rank to those who did not complete their primary education. Figure 1 shows the distribution of rank per municipality. 
+
+\begin{center}
+\large\textbf{Identification}
+\end{center}
+
+My identification relies on conditional ignorability. I assume that, conditional on a series of controls, the proportion of bureaucrats and the rank composition of the municipality-level bureaucracy is as if random. I assume that I am measuring all confounders between treatment and outcome. To evaluate the strength of this assumption, I perform sensitivity analyses. 
+
+\begin{center}
+\large\textbf{Analysis}
+\end{center}
+
+I use OLS regressions with weights per municipality population, province fixed effects, and cluster-robust standard errors type 2 at the province level. For all models, the municipality-level control variables are: share of victims across time relative to 1970 population, vote share of the president who Pinochet ousted, average years of schooling, logged distance to regional capital, population, rural population share. I run all specifications with and without controls.
+
+To evaluate whether state employment is correlated with electoral support for the authoritarian, I use the following specification:
+
+$$Y_m = \alpha + \beta \, \text{Proportion of bureaucrats}_m +  \mathbf{X}_m'\gamma + \phi_p + \varepsilon_m$$ 
+
+To evaluate whether the rank has any effect on electoral support for the authoritarian, I run two specifications. In the first, the independent variable of interest is the municipality share of high- and mid-level bureaucrats \textit{out of all bureaucrats}, $\theta_m^{high-rank}$ and $\theta_m^{mid-rank}$ respectively. 
+
+$$Y_m = \alpha + \beta_1 \, \theta_m^{high-rank} + \beta_2 \, \theta_m^{mid-rank} + \mathbf{X}_m'\gamma + \phi_p + \varepsilon_m$$ 
+
+I run a second specification in which independent variable of interest is the municipality share of high- and mid-level bureaucrats \textit{out of the population}, $\delta_m^{high-rank}$ and $\delta_m^{mid-rank}$ respectively. 
+
+$$Y_m = \alpha + \beta_1 \, \delta_m^{high-rank} + \beta_2 \, \delta_m^{mid-rank} +  + \mathbf{X}_m'\gamma + \phi_p + \varepsilon_m$$ 
+
+ 
+
+\begin{center}
+\large\textbf{Empirical results}
+\end{center}
+
+\begin{center}
+\large\textbf{Conclusion}
+\end{center}
+
+qq
