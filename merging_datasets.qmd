@@ -124,6 +124,8 @@ VotingData_Dataverse <- VotingData_Dataverse |>
 
 # ------------------------------------------------------------------------------
 
+
+
 ```
 
 
@@ -309,6 +311,18 @@ formula = VoteShareNo ~ prop_burocrata + sh_victims_total + mean_years_pop +
 ```
 
 ```{r}
+# Need this function for many graphs 
+tidy_model <- function(model, model_name, keep_terms) {
+  as.data.frame(summary(model)$coefficients) %>%
+    tibble::rownames_to_column("term") %>%
+    rename(estimate = Estimate, se = `Std. Error`, ci_low = `CI Lower`, 
+    ci_high = `CI Upper`) %>%
+    filter(term %in% keep_terms) %>%
+    mutate(model = model_name)
+}
+```
+
+```{r}
 
 # ------------------------------------------------------------------------------
 # GRAPH
@@ -334,15 +348,6 @@ term_order_1 <- c("pop_1987", "mean_years_pop", "lnDistRegCapital",
 
 # Plot 1: prop_burocrata with all controls
 
-tidy_model <- function(model, model_name, keep_terms) {
-  as.data.frame(summary(model)$coefficients) %>%
-    tibble::rownames_to_column("term") %>%
-    rename(estimate = Estimate, se = `Std. Error`, ci_low = `CI Lower`, 
-    ci_high = `CI Upper`) %>%
-    filter(term %in% keep_terms) %>%
-    mutate(model = model_name)
-}
-
 bind_rows(
   tidy_model(first_nocontrols, "No Controls",   "prop_burocrata"),
   tidy_model(first,            "With Controls", c("prop_burocrata", 
@@ -365,7 +370,6 @@ bind_rows(
 Rank share among bureaucrats per municipality: 
 
 ```{r}
-
 # ------------------------------------------------------------------------------
 # REGRESSIONS 
 # ------------------------------------------------------------------------------
@@ -430,28 +434,68 @@ bind_rows(
 
 ```
 
+WITHOUT CONTROLLING FOR EDUCATION 
+
+```{r}
+# ------------------------------------------------------------------------------
+# REGRESSIONS 
+# ------------------------------------------------------------------------------
+
+# Running the regressions
+second_nocontrols_noeducation <- lm_robust(data = VotingData_Dataverse, 
+formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro + 
+  factor(IDProv), 
+se_type = "CR2", clusters = IDProv, weights = pop_1987)
+
+second_noeducation <- lm_robust(data = VotingData_Dataverse, 
+formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro +
+   sh_victims_total + lnDistRegCapital + share_allende70 + pop_1987 + factor(IDProv), 
+  se_type = "CR2", clusters = IDProv, weights = pop_1987)
+
+
+```
 
 
 ```{r}
 
 # ------------------------------------------------------------------------------
-# ESTIMATES
+# GRAPH
 # ------------------------------------------------------------------------------
 
-modelsummary(
-  list("(1)" = first_nocontrols, 
-       "(2)" = first,
-       "(3)" = second_nocontrols, 
-       "(4)" = second),
-  coef_map = c(
-    "prop_burocrata"        = "Proportion of bureaucrats",
-    "share_high_among_buro" = "High rank share",
-    "share_mid_among_buro"  = "Mid rank share"
-  ),
-  gof_map = c("nobs", "r.squared", "std.errors"),
-  fmt = 4,
-  output = "table_combined.png"
-)
+# Updated controls and labels
+controls <- c("pop_1987", "lnDistRegCapital", "share_allende70",
+ "sh_victims_total")
+
+term_labels <- c(
+  "share_high_among_buro" = "High rank",
+  "share_mid_among_buro"  = "Mid rank",
+  "pop_1987"              = "Population 1987",
+  "lnDistRegCapital"      = "Ln distance to reg. cap.",
+  "share_allende70"       = "Allende vote share 1970",
+  "sh_victims_total" = "Total victims / Pop. 1970" 
+  )
+
+term_order <- c("pop_1987", "lnDistRegCapital", 
+"share_allende70", "sh_victims_total", "share_mid_among_buro", 
+"share_high_among_buro")
+
+bind_rows(
+  tidy_model(second_nocontrols_noeducation, "No Controls",   c("share_high_among_buro", 
+  "share_mid_among_buro")),
+  tidy_model(second_noeducation,            "With Controls", c("share_high_among_buro", 
+  "share_mid_among_buro", controls))
+) %>%
+  ggplot(aes(x = estimate, y = factor(term, levels = term_order), 
+  color = model)) +
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.2, position = position_dodge(width = 0.5)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  scale_y_discrete(labels = term_labels) +
+  labs(title = "Bureaucrat Rank Composition vs Vote Share No, No Education Covariate",
+       x = "Estimate (95% CI)", y = NULL, color = NULL) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
 
 ```
 
@@ -485,13 +529,12 @@ term_labels_prop <- c(
   "prop_mid"         = "Mid rank bureaucrats per municipality",
   "pop_1987"         = "Population 1987",
   "lnDistRegCapital" = "Ln distance to regional capital",
-  "DMilitaryPresence"= "Military presence",
   "share_allende70"  = "Allende vote share 1970", 
   "mean_years_pop"   = "Mean years of schooling"
 )
 
 term_order_prop <- c("pop_1987", "mean_years_pop", "lnDistRegCapital", 
-                    "share_allende70", "DMilitaryPresence", "prop_mid", 
+                    "share_allende70", "prop_mid", 
                     "prop_high")
 
 bind_rows(
@@ -517,7 +560,7 @@ bind_rows(
 
 ```{r}
 # ------------------------------------------------------------------------------
-# Joint graph 
+# JOINT GRAPH
 # ------------------------------------------------------------------------------
 
 term_labels <- c(
@@ -643,6 +686,8 @@ sens_first <- sensemakr(model = sens_model_first,
                   treatment = "prop_burocrata",
                   kd = 1:3,
                   ky = 1:3)
+
+
 plot(sens_first)
 
 # ------------------------------------------------------------------------------
@@ -678,9 +723,8 @@ plot(sens_second_mid)
 # ------------------------------------------------------------------------------
 
 sens_model_third_high <- lm(
-VoteShareNo ~ prop_high + prop_mid + DMilitaryPresence + 
-  lnDistRegCapital + share_allende70 + pop_1987 + mean_years_pop + 
-  factor(IDProv), 
+VoteShareNo ~ prop_high + prop_mid + sh_victims_total + lnDistRegCapital + 
+  share_allende70 + pop_1987 + mean_years_pop + factor(IDProv),
                  data = VotingData_Dataverse,
                  weights = pop_1987)
 
@@ -694,9 +738,8 @@ plot(sens_third_high)
 # ------------------------------------------------------------------------------
 
 sens_model_third_mid <- lm(
-VoteShareNo ~ prop_high + prop_mid + DMilitaryPresence + 
-  lnDistRegCapital + share_allende70 + pop_1987 + mean_years_pop + 
-  factor(IDProv), 
+VoteShareNo ~ prop_high + prop_mid + sh_victims_total + lnDistRegCapital + 
+  share_allende70 + pop_1987 + mean_years_pop + factor(IDProv),
                  data = VotingData_Dataverse,
                  weights = pop_1987)
 
@@ -750,8 +793,7 @@ bind_rows(
   row_spec(0, bold = FALSE, italic = FALSE) |>
   pack_rows("Proportion of bureaucrats per municipality", 1, 1) |>
   pack_rows("Share of ranks among bureaucrats per municipality", 2, 3) |>
-  pack_rows("Proportion of ranks per municipality population", 4, 5) |>
-  save_kable("sensitivity_table_all.png", zoom = 3)
+  pack_rows("Proportion of ranks per municipality population", 4, 5) 
 
 ```
 
@@ -909,27 +951,29 @@ prop_rango_long %>%
 # Bureaucrat share vs Vote Share No
 ggplot(VotingData_Dataverse, aes(x = prop_burocrata, y = VoteShareNo)) +
   geom_point(alpha = 0.5, color = "steelblue") +
-  geom_smooth(method = "lm", color = "red", se = TRUE) +
+  geom_smooth(aes(color = "Linear"), method = "lm", se = TRUE, alpha = 0.1) +
+  geom_smooth(aes(color = "Quadratic"), method = "lm", formula = y ~ poly(x, 2), se = TRUE, alpha = 0.1) +
+  scale_color_manual(values = c("Linear" = "red", "Quadratic" = "blue")) +
   labs(title = "Bureaucrat Share vs No Vote Share (1988)",
-       x = "Proportion of Bureaucrats", y = "Vote Share No") +
+       x = "Proportion of Bureaucrats", y = "Vote Share No",
+       color = "Fit") +
   theme_minimal()
 
 # There is one outlier that is driving the relationship 
 
 VotingData_Dataverse |>
-  filter(comuna != "71") |>
+  filter(comuna != 71) |>
   ggplot(aes(x = prop_burocrata, y = VoteShareNo)) +
   geom_point(alpha = 0.5, color = "steelblue") +
-  geom_smooth(aes(color = "Quadratic fit"), method = "lm", 
-              formula = y ~ x + I(x^2), se = TRUE) +
-  scale_color_manual(values = c("Quadratic fit" = "red", 
-  "Mean No vote share" = "black")) +
-  scale_linetype_manual(values = c("Mean No vote share" = "dashed")) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.1, color = "red") +
   labs(title = "Bureaucrat Share vs No Vote Share (1988)",
-       x = "Proportion of Bureaucrats", y = "Vote Share No",
-       color = NULL, linetype = NULL) +
-  theme_minimal() +
-  theme(legend.position = "bottom")
+       x = "Proportion of Bureaucrats", y = "Vote Share No") +
+  theme_minimal()
+
+quad_fit <- lm(VoteShareNo ~ poly(prop_burocrata, 2, raw = TRUE) + sh_educ_12more + sh_victims_total + lnDistRegCapital + share_allende70 + pop_1987 + sh_rural_70, 
+               data = filter(VotingData_Dataverse, comuna != 71))
+
+summary(quad_fit)
 
 # Looking at variation of rank among municipalities
 max_prop <- prop_burocrata %>%
@@ -1159,3 +1203,369 @@ ggplot(df_plot, aes(x = sh_rural_70, y = VoteShareNo)) +
         plot.title.position = "plot")
 ```
 
+
+
+FOR THE PAPER: 
+
+
+
+
+```{r}
+
+# Distribution of years of schooling
+ggplot(processedchilenos, aes(x = years_schooling)) +
+  geom_histogram(bins = 20, fill = "steelblue", color = "white", alpha = 0.85) +
+  scale_x_continuous(breaks = seq(0, 20, by = 2)) +
+  labs(
+    title = "Distribution of Years of Schooling",
+    subtitle = "Chileans, 1987",
+    x = "Years of Schooling",
+    y = "Count"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+```
+
+
+```{r}
+
+
+
+prop_burocrata <- processedchilenos %>%
+  group_by(Comuna_1987_Origen3) %>%
+  summarise(
+# Proportion of bureaucrats per municipality
+    prop_burocrata = as.numeric(mean(burocrata, na.rm = TRUE)),
+# Proportion of bureaucrats per rank per municipality,
+    prop_high = as.numeric(mean(burocrata & rango == "high", na.rm = TRUE)),
+    prop_mid  = as.numeric(mean(burocrata & rango == "mid",  na.rm = TRUE)),
+    prop_low  = as.numeric(mean(burocrata & rango == "low",  na.rm = TRUE)),
+# Population per municipality
+    pop_1987  = n(),
+# Mean years of schooling per municipality
+    mean_years_pop = mean(years_schooling, na.rm = TRUE)
+  )
+
+# Distribution of prop_burocrata across municipalities
+ggplot(prop_burocrata, aes(x = prop_burocrata)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+  labs(title = "Distribution of Bureaucrat Share Across Municipalities",
+       x = "Proportion of Bureaucrats", y = "Count") +
+  theme_minimal()
+
+# Distribution of prop_high/mid/low across municipalities
+prop_rango_long <- prop_burocrata %>%
+  pivot_longer(cols = c(prop_high, prop_mid, prop_low),
+               names_to = "rango", values_to = "proportion") %>%
+  mutate(rango = factor(recode(rango,
+                        prop_high = "High (13+ years)",
+                        prop_mid  = "Mid (9-12 years)",
+                        prop_low  = "Low (≤8 years)"),
+                        levels = c("Low (≤8 years)", "Mid (9-12 years)", 
+                                   "High (13+ years)")))                                  
+
+ggplot(prop_rango_long, aes(x = proportion, fill = rango)) +
+  geom_histogram(bins = 30, color = "white", alpha = 0.85) +
+  facet_wrap(~rango) +
+  labs(title = "Distribution of Bureaucrat Share by Education Level",
+       x = "Proportion", y = "Count") +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+```
+
+
+```{r}
+
+# Average proportion by rank across all municipalities
+prop_rango_long %>%
+  group_by(rango) %>%
+  summarise(mean_prop = mean(proportion, na.rm = TRUE)) %>%
+  ggplot(aes(x = rango, y = mean_prop, fill = rango)) +
+  geom_col(color = "white") +
+  labs(title = "Average Bureaucrat Share by Education Level",
+       x = "Education Level", y = "Mean Proportion") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+```
+
+
+```{r}
+
+# Bureaucrat share vs Vote Share No
+ggplot(processeddata, aes(x = prop_burocrata, y = VoteShareNo)) +
+  geom_point(alpha = 0.5, color = "steelblue") +
+  geom_smooth(color = "red", method = "lm", se = TRUE, alpha = 0.1) +
+  labs(title = "Bureaucrat Share vs No Vote Share (1988)",
+       x = "Proportion of Bureaucrats", y = "Vote Share No") +
+  theme_minimal()
+
+```
+
+
+```{r}
+
+
+# Looking at variation of rank among municipalities
+max_prop <- prop_burocrata %>%
+  summarise(max(prop_high, prop_mid, prop_low, na.rm = TRUE)) %>%
+  pull()
+
+prop_burocrata %>%
+  pivot_longer(cols = c(prop_high, prop_mid, prop_low),
+               names_to = "rango", values_to = "proportion") %>%
+  mutate(rango = recode(rango,
+                        prop_high = "High Rank",
+                        prop_mid  = "Mid Rank",
+                        prop_low  = "Low Rank")) %>%
+  ggplot(aes(x = reorder(as.character(Comuna_1987_Origen3), proportion), 
+             y = proportion, color = rango)) +
+  geom_point(size = 0.8, alpha = 0.6) +
+  facet_wrap(~rango) +
+  ylim(0, max_prop) +
+  labs(title = "Bureaucrat Rank Share by Municipality",
+       x = NULL, y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = "none")
+
+```
+
+
+```{r}
+
+
+# Education has a quadratic relationship with opposition voting 
+
+quad_model <- lm(VoteShareNo ~ mean_years_pop + I(mean_years_pop^2), 
+data = processeddata)
+coefs <- coef(quad_model)
+turning_point <- -coefs["mean_years_pop"] / (2 * coefs["I(mean_years_pop^2)"])
+
+ggplot(processeddata, aes(x = mean_years_pop, y = VoteShareNo)) +
+  geom_point(alpha = 0.5, color = "steelblue") +
+  geom_smooth(method = "lm", formula = y ~ x + I(x^2),
+              color = "red", se = TRUE) +
+  geom_vline(xintercept = turning_point, linetype = "dashed", color = "black") +
+  annotate("text", x = turning_point + 0.15,
+           y = max(processeddata$VoteShareNo, na.rm = TRUE) * 0.95,
+           label = paste0("Peak: ", round(turning_point, 2), " years"),
+           hjust = 0, size = 3.5) +
+  labs(title = "Education vs Vote Share No — Quadratic Fit",
+       x = "Mean Years of Schooling",
+       y = "Vote Share No") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"))
+```
+
+
+```{r}
+
+# Summary statistics 
+
+processeddata %>%
+  select(VoteShareNo, prop_burocrata, share_high_among_buro, 
+  share_mid_among_buro, prop_high, prop_mid, sh_victims_total, lnDistRegCapital, share_allende70, pop_1987, sh_rural_70, mean_years_pop) %>%
+  summary()
+
+datasummary(
+  (`No vote share` = VoteShareNo) +
+  (`Allende vote share 1970` = share_allende70) +
+  (`Proportion of bureaucrats` = prop_burocrata) +
+  (`High rank bureaucrats` = prop_high) +
+  (`Mid rank bureaucrats ` = prop_mid) +
+  (`High rank share among bureaucrats` = share_high_among_buro) +
+  (`Mid rank share among bureaucrats` = share_mid_among_buro) +
+  (`Total victims / Pop. 1970` = sh_victims_total) +
+  (`Ln distance to regional capital` = lnDistRegCapital) +
+  (`Population 1987` = pop_1987) +
+  (`Share rural population 1970` = sh_rural_70) +
+  (`Mean years of schooling per municipality` = mean_years_pop) ~
+  Mean + SD + Min + Max + N,
+  data = processeddata
+)
+
+```
+
+
+```{r}
+
+# Rurality per education 
+
+# Create tertiles 
+processeddata <- processeddata %>%
+  mutate(rural_tertile = cut(
+    sh_rural_70,
+    breaks = quantile(sh_rural_70, c(0, 1/3, 2/3, 1), na.rm = TRUE),
+    labels = c("Urban (low rural)", "Mixed", "Rural (high rural)"),
+    include.lowest = TRUE
+  ))
+
+# Plot: education vs No vote, by tertile
+ggplot(processeddata, aes(x = mean_years, y = VoteShareNo, 
+                    color = rural_tertile, fill = rural_tertile)) +
+  geom_point(alpha = 0.35, size = 1.5) +
+  geom_smooth(method = "lm", formula = y ~ x + I(x^2), 
+              alpha = 0.18, linewidth = 1.1) +
+  scale_color_brewer(palette = "Set1") +
+  scale_fill_brewer(palette = "Set1") +
+  labs(
+    x = "Mean years of education (commune)",
+    y = "Vote share No",
+    color = "Rurality tertile (1970)",
+    fill  = "Rurality tertile (1970)",
+    title = "Education and No vote, by rurality tertile",
+    subtitle = "Quadratic fits with 95% CIs"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom",
+        plot.title.position = "plot")
+
+```
+
+
+```{r}
+
+
+# Distribution of rurality
+
+# Calculate key stats for annotations
+n_total <- sum(!is.na(processeddata$sh_rural_70))
+n_fully_urban <- sum(processeddata$sh_rural_70 == 0, na.rm = TRUE)
+pct_fully_urban <- n_fully_urban / n_total
+median_rural <- median(processeddata$sh_rural_70, na.rm = TRUE)
+
+ggplot(processeddata, aes(x = sh_rural_70)) +
+  # Histogram in proportions (not density)
+  geom_histogram(aes(y = after_stat(count) / sum(after_stat(count))),
+                 bins = 25, fill = "#4A90C2", color = "white", alpha = 0.9) +
+  
+  # Shaded zones for substantive categories
+  annotate("rect", xmin = -2, xmax = 25, ymin = 0, ymax = Inf,
+           fill = "#E63946", alpha = 0.06) +
+  annotate("rect", xmin = 60, xmax = 102, ymin = 0, ymax = Inf,
+           fill = "#2A9D8F", alpha = 0.06) +
+  
+  # Median line
+  geom_vline(xintercept = median_rural, linetype = "dashed", 
+             color = "grey30", linewidth = 0.6) +
+  
+  # Zone labels at top
+  annotate("text", x = 12, y = 0.085, label = "URBAN", 
+           color = "#E63946", fontface = "bold", size = 3.8) +
+  annotate("text", x = 42, y = 0.085, label = "MIXED", 
+           color = "grey40", fontface = "bold", size = 3.8) +
+  annotate("text", x = 80, y = 0.085, label = "RURAL", 
+           color = "#2A9D8F", fontface = "bold", size = 3.8) +
+  
+  # Callout for the urban spike
+  annotate("curve", x = 15, y = 0.07, xend = 2, yend = pct_fully_urban + 0.003,
+           arrow = arrow(length = unit(0.2, "cm")), 
+           color = "grey30", curvature = 0.3) +
+  annotate("text", x = 22, y = 0.072, 
+           label = paste0(round(pct_fully_urban * 100), 
+           "% of communes\nare fully urban"),
+           hjust = 0, size = 3.3, color = "grey20") +
+  
+  # Median callout
+  annotate("text", x = median_rural + 1, y = 0.06, 
+           label = paste0("Median: ", round(median_rural), "%"),
+           hjust = 0, size = 3.3, color = "grey20", fontface = "italic") +
+  
+  scale_y_continuous(labels = percent_format(accuracy = 1),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(breaks = seq(0, 100, 25),
+                     labels = c("0%\n(fully urban)", "25%", "50%", "75%", 
+                     "100%\n(fully rural)"),
+                     expand = c(0.01, 0.01)) +
+  
+  labs(
+    x = "Share of commune population living in rural areas (1970)",
+    y = "Share of communes",
+    title = "Chilean communes were sharply bimodal in 1970",
+    subtitle = "Most communes were either heavily rural or fully urban — 
+    few sat in between"
+  ) +
+  
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.title.position = "plot",
+    plot.subtitle = element_text(color = "grey30", margin = margin(b = 15)),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10))
+  )
+
+# Rurality by tertile 
+
+# Build rurality tertiles — assuming you have a 1970 rurality variable
+# Adjust the variable name (e.g. sh_rural_70) to match your data
+df_facet <- processeddata %>%
+  filter(!is.na(sh_rural_70)) %>%
+  mutate(rurality_tertile = ntile(sh_rural_70, 3),
+         rurality_tertile = factor(rurality_tertile,
+                                   levels = 1:3,
+                                   labels = c("Urban",
+                                              "Mixed",
+                                              "Rural")))
+
+# Tertile colors matching your original plot
+tertile_colors <- c("Urban"  = "#E74C3C",
+                    "Mixed" = "#3498DB",
+                    "Rural" = "#27AE60")
+
+ggplot(df_facet, aes(x = mean_years, y = VoteShareNo)) +
+  # Points: only the panel's own tertile, colored
+  geom_point(aes(color = rurality_tertile), alpha = 0.6, size = 1.5) +
+  # Quadratic fit: restricted to the panel's tertile
+  geom_smooth(aes(color = rurality_tertile, fill = rurality_tertile),
+              method = "lm", formula = y ~ x + I(x^2),
+              se = TRUE, alpha = 0.2) +
+facet_wrap(~ rurality_tertile, nrow = 1, scales = "free_x") +
+  scale_color_manual(values = tertile_colors) +
+  scale_fill_manual(values = tertile_colors) +
+  labs(title = "Education and No vote, by rurality tertile",
+       subtitle = "Quadratic fits with 95% CIs",
+       x = "Mean years of education (municipality)",
+       y = "Vote share No") +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold"),
+        legend.position = "none",
+        strip.text = element_text(face = "bold"),
+        panel.spacing = unit(1.2, "lines"))
+
+
+```
+
+
+```{r}
+
+# Votes and rurality 
+
+ggplot(processeddata, aes(x = sh_rural_70, y = VoteShareNo)) +
+  geom_point(aes(color = rural_tertile), alpha = 0.55, size = 1.8) +
+  geom_smooth(method = "loess", color = "grey25", fill = "grey25", 
+  alpha = 0.15) +
+  scale_color_brewer(palette = "Set1") +
+  labs(
+    x = "Rural share (1970)",
+    y = "Vote share No",
+    color = "Rurality tertile",
+    title = "No vote share by rurality per municipality"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom",
+        plot.title.position = "plot")
+```
