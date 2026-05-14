@@ -279,9 +279,8 @@ VotingData_Dataverse <- VotingData_Dataverse %>%
         prop_burocrata = prop_burocrata * 100,
         prop_high      = prop_high * 100,
         prop_mid       = prop_mid  * 100,
-        prop_low       = prop_low  * 100,
+        prop_low       = prop_low  * 100 %>%
 # Share of ranks among bureaucrats per municipality 
-        sh_rural_70 = sh_rural_70 * 100) %>%
     mutate(share_high_among_buro = (prop_high / prop_burocrata) *100,
     share_mid_among_buro  = (prop_mid  / prop_burocrata) *100)
 
@@ -305,7 +304,7 @@ clusters = IDProv, weights = pop_1987)
 
 first <- lm_robust(data = VotingData_Dataverse, 
 formula = VoteShareNo ~ prop_burocrata + sh_victims_total + mean_years_pop +
-  lnDistRegCapital + share_allende70 + pop_1987 + sh_rural_70 + factor(IDProv), 
+  lnDistRegCapital + share_allende70 + pop_1987 + factor(IDProv), 
   se_type = "CR2", clusters = IDProv, weights = pop_1987)
 
 ```
@@ -330,7 +329,7 @@ tidy_model <- function(model, model_name, keep_terms) {
 
 # Controls, labels, order
 controls <- c("pop_1987", "lnDistRegCapital", "share_allende70", 
-"sh_victims_total", "sh_rural_70", "mean_years_pop")
+"sh_victims_total", "mean_years_pop")
 
 term_labels <- c(
   "prop_burocrata"        = "Bureaucrats per municipality",
@@ -338,12 +337,11 @@ term_labels <- c(
   "share_allende70"       = "Allende vote share 1970",
   "lnDistRegCapital"      = "Ln distance to regional capital",
   "pop_1987"              = "Population 1987",
-  "sh_rural_70"           = "Share rural population", 
   "mean_years_pop"        = "Mean years of schooling"
 )
 
 term_order_1 <- c("pop_1987", "mean_years_pop", "lnDistRegCapital", 
-                  "sh_rural_70", "share_allende70", 
+               "share_allende70", 
                   "sh_victims_total", "prop_burocrata")
 
 # Plot 1: prop_burocrata with all controls
@@ -557,6 +555,52 @@ bind_rows(
 
 ```
 
+```{r}
+#| label: fig-model3
+#| fig-cap: "Coefficient plot for Model 3: rank share per municipality population vs No vote share."
+#| fig-width: 7
+#| fig-height: 5
+#| warning: false
+#| message: false
+
+controls <- c("pop_1987", "lnDistRegCapital", "share_allende70", 
+              "mean_years_pop", "sh_victims_total")
+
+term_labels_prop <- c(
+  "prop_high"        = "High rank bureaucrats per municipality",
+  "prop_mid"         = "Mid rank bureaucrats per municipality",
+  "pop_1987"         = "Population 1987",
+  "lnDistRegCapital" = "Ln distance to regional capital",
+  "share_allende70"  = "Allende vote share 1970", 
+  "mean_years_pop"   = "Mean years of schooling"
+)
+
+term_order_prop <- c("pop_1987", "mean_years_pop", "lnDistRegCapital", 
+                     "share_allende70", "prop_mid", "prop_high")
+
+h <- bind_rows(
+  tidy_model(second_nocontrols_prop, "No Controls",   c("prop_high", "prop_mid")),
+  tidy_model(second_prop,            "With Controls", c("prop_high", "prop_mid", controls))
+) %>%
+  ggplot(aes(x = estimate, y = factor(term, levels = term_order_prop), 
+             color = model)) +
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.2, position = position_dodge(width = 0.5)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  scale_y_discrete(labels = term_labels_prop) +
+  labs(title = "Bureaucrat Rank Share vs Vote Share No",
+       x = "Estimate (95% CI)", y = NULL, color = NULL) +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.justification = "center",
+        legend.text = element_text(size = 6),
+        legend.key.size = unit(0.3, "cm"),
+        plot.margin = margin(t = 20, r = 5, b = 5, l = 5),
+        plot.title = element_text(size = 9, hjust = 0.5))
+
+print(h)
+```
 
 ```{r}
 # ------------------------------------------------------------------------------
@@ -608,6 +652,7 @@ bind_rows(
 
 Showing all results together: 
 ```{r}
+
 # ── REGRESSION TABLE ──────────────────────────────────────────────────────────
 
 coef_map <- c(
@@ -620,7 +665,6 @@ coef_map <- c(
   "share_allende70"       = "Allende vote share 1970",
   "lnDistRegCapital"      = "Ln distance to regional capital",
   "pop_1987"              = "Population 1987",
-  "sh_rural_70"           = "Rural share 1970",
   "mean_years_pop"        = "Mean years of schooling"
 )
 
@@ -657,7 +701,7 @@ modelsummary(
     "No controls" = 1, "Controls" = 1
   )) |>
   footnote(
-    general = "Province fixed effects included in all models. Standard errors clustered at province level (CR2). Observations weighted by 1987 municipality population. Controls: total victims/pop. 1970, Allende vote share 1970, ln distance to regional capital, population 1987, rural share 1970, mean years of schooling.",
+    general = "Province fixed effects included in all models. Standard errors clustered at province level (CR2). Observations weighted by 1987 municipality population. Controls: total victims/pop. 1970, Allende vote share 1970, ln distance to regional capital, population 1987, mean years of schooling.",
     general_title     = "Note:",
     footnote_as_chunk = TRUE,
     threeparttable    = TRUE
@@ -677,8 +721,7 @@ Robustness checks:
 # ------------------------------------------------------------------------------
 
 sens_model_first <- lm(VoteShareNo ~ prop_burocrata + sh_victims_total + 
-  mean_years_pop + lnDistRegCapital + share_allende70 + pop_1987 + 
-  sh_rural_70 + factor(IDProv), 
+  mean_years_pop + lnDistRegCapital + share_allende70 + pop_1987 + factor(IDProv), 
                  data = VotingData_Dataverse,
                  weights = pop_1987)
 
@@ -810,7 +853,7 @@ clusters = IDProv, weights = pop_1987)
 
 aylwin_controls_prop <- lm_robust(data = VotingData_Dataverse, 
 formula = share_aylwin89 ~ prop_burocrata + sh_victims_total +
-  lnDistRegCapital + share_allende70 + pop_1987 + sh_rural_70 + factor(IDProv), 
+  lnDistRegCapital + share_allende70 + pop_1987 + factor(IDProv), 
   se_type = "CR2", clusters = IDProv, weights = pop_1987)
 
 aylwin_nocontrols_share <- lm_robust(data = VotingData_Dataverse, 
@@ -820,7 +863,7 @@ formula = share_aylwin89 ~ share_high_among_buro + share_mid_among_buro +
           
 aylwin_controls_share <- lm_robust(data = VotingData_Dataverse, 
 formula = share_aylwin89 ~ share_high_among_buro + share_mid_among_buro + 
-  lnDistRegCapital + share_allende70 + pop_1987 + sh_rural_70 + factor(IDProv), 
+  lnDistRegCapital + share_allende70 + pop_1987 + factor(IDProv), 
   se_type = "CR2", clusters = IDProv, weights = pop_1987)
 
 aylwin_nocontrols_prop_rank <- lm_robust(data = VotingData_Dataverse, 
@@ -830,7 +873,7 @@ formula = share_aylwin89 ~ prop_high + prop_mid +
           
 aylwin_controls_prop_rank <- lm_robust(data = VotingData_Dataverse, 
 formula = share_aylwin89 ~ prop_high + prop_mid + 
-  lnDistRegCapital + share_allende70 + pop_1987 + sh_rural_70 + factor(IDProv), 
+  lnDistRegCapital + share_allende70 + pop_1987 + factor(IDProv), 
   se_type = "CR2", clusters = IDProv, weights = pop_1987)
 
 ```
@@ -842,7 +885,7 @@ formula = share_aylwin89 ~ prop_high + prop_mid +
 # ------------------------------------------------------------------------------
 
 controls <- c("pop_1987", "lnDistRegCapital", "share_allende70", 
-"sh_victims_total", "sh_rural_70")
+"sh_victims_total")
 
 term_labels <- c(
   "prop_burocrata"        = "Prop. bureaucrats",
@@ -970,7 +1013,7 @@ VotingData_Dataverse |>
        x = "Proportion of Bureaucrats", y = "Vote Share No") +
   theme_minimal()
 
-quad_fit <- lm(VoteShareNo ~ poly(prop_burocrata, 2, raw = TRUE) + sh_educ_12more + sh_victims_total + lnDistRegCapital + share_allende70 + pop_1987 + sh_rural_70, 
+quad_fit <- lm(VoteShareNo ~ poly(prop_burocrata, 2, raw = TRUE) + sh_educ_12more + sh_victims_total + lnDistRegCapital + share_allende70 + pop_1987, 
                data = filter(VotingData_Dataverse, comuna != 71))
 
 summary(quad_fit)
@@ -1025,7 +1068,7 @@ ggplot(df_plot, aes(x = mean_years_pop, y = VoteShareNo)) +
 
 VotingData_Dataverse %>%
   select(VoteShareNo, prop_burocrata, share_high_among_buro, 
-  share_mid_among_buro, prop_high, prop_mid, sh_victims_total, lnDistRegCapital, share_allende70, pop_1987, sh_rural_70, mean_years_pop) %>%
+  share_mid_among_buro, prop_high, prop_mid, sh_victims_total, lnDistRegCapital, share_allende70, pop_1987, mean_years_pop) %>%
   summary()
 
 datasummary(
@@ -1039,171 +1082,12 @@ datasummary(
   (`Total victims / Pop. 1970` = sh_victims_total) +
   (`Ln distance to regional capital` = lnDistRegCapital) +
   (`Population 1987` = pop_1987) +
-  (`Share rural population 1970` = sh_rural_70) +
   (`Mean years of schooling per municipality` = mean_years_pop) ~
   Mean + SD + Min + Max + N,
   data = VotingData_Dataverse
 )
 
-# Rurality per education 
-
-# Create tertiles 
-df_plot <- df_plot %>%
-  mutate(rural_tertile = cut(
-    sh_rural_70,
-    breaks = quantile(sh_rural_70, c(0, 1/3, 2/3, 1), na.rm = TRUE),
-    labels = c("Urban (low rural)", "Mixed", "Rural (high rural)"),
-    include.lowest = TRUE
-  ))
-
-# Plot: education vs No vote, by tertile
-ggplot(df_plot, aes(x = mean_years, y = VoteShareNo, 
-                    color = rural_tertile, fill = rural_tertile)) +
-  geom_point(alpha = 0.35, size = 1.5) +
-  geom_smooth(method = "lm", formula = y ~ x + I(x^2), 
-              alpha = 0.18, linewidth = 1.1) +
-  scale_color_brewer(palette = "Set1") +
-  scale_fill_brewer(palette = "Set1") +
-  labs(
-    x = "Mean years of education (commune)",
-    y = "Vote share No",
-    color = "Rurality tertile (1970)",
-    fill  = "Rurality tertile (1970)",
-    title = "Education and No vote, by rurality tertile",
-    subtitle = "Quadratic fits with 95% CIs"
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(legend.position = "bottom",
-        plot.title.position = "plot")
-
-# Distribution of rurality
-
-# Calculate key stats for annotations
-n_total <- sum(!is.na(df_plot$sh_rural_70))
-n_fully_urban <- sum(df_plot$sh_rural_70 == 0, na.rm = TRUE)
-pct_fully_urban <- n_fully_urban / n_total
-median_rural <- median(df_plot$sh_rural_70, na.rm = TRUE)
-
-ggplot(df_plot, aes(x = sh_rural_70)) +
-  # Histogram in proportions (not density)
-  geom_histogram(aes(y = after_stat(count) / sum(after_stat(count))),
-                 bins = 25, fill = "#4A90C2", color = "white", alpha = 0.9) +
-  
-  # Shaded zones for substantive categories
-  annotate("rect", xmin = -2, xmax = 25, ymin = 0, ymax = Inf,
-           fill = "#E63946", alpha = 0.06) +
-  annotate("rect", xmin = 60, xmax = 102, ymin = 0, ymax = Inf,
-           fill = "#2A9D8F", alpha = 0.06) +
-  
-  # Median line
-  geom_vline(xintercept = median_rural, linetype = "dashed", 
-             color = "grey30", linewidth = 0.6) +
-  
-  # Zone labels at top
-  annotate("text", x = 12, y = 0.085, label = "URBAN", 
-           color = "#E63946", fontface = "bold", size = 3.8) +
-  annotate("text", x = 42, y = 0.085, label = "MIXED", 
-           color = "grey40", fontface = "bold", size = 3.8) +
-  annotate("text", x = 80, y = 0.085, label = "RURAL", 
-           color = "#2A9D8F", fontface = "bold", size = 3.8) +
-  
-  # Callout for the urban spike
-  annotate("curve", x = 15, y = 0.07, xend = 2, yend = pct_fully_urban + 0.003,
-           arrow = arrow(length = unit(0.2, "cm")), 
-           color = "grey30", curvature = 0.3) +
-  annotate("text", x = 22, y = 0.072, 
-           label = paste0(round(pct_fully_urban * 100), 
-           "% of communes\nare fully urban"),
-           hjust = 0, size = 3.3, color = "grey20") +
-  
-  # Median callout
-  annotate("text", x = median_rural + 1, y = 0.06, 
-           label = paste0("Median: ", round(median_rural), "%"),
-           hjust = 0, size = 3.3, color = "grey20", fontface = "italic") +
-  
-  scale_y_continuous(labels = percent_format(accuracy = 1),
-                     expand = expansion(mult = c(0, 0.05))) +
-  scale_x_continuous(breaks = seq(0, 100, 25),
-                     labels = c("0%\n(fully urban)", "25%", "50%", "75%", 
-                     "100%\n(fully rural)"),
-                     expand = c(0.01, 0.01)) +
-  
-  labs(
-    x = "Share of commune population living in rural areas (1970)",
-    y = "Share of communes",
-    title = "Chilean communes were sharply bimodal in 1970",
-    subtitle = "Most communes were either heavily rural or fully urban — 
-    few sat in between"
-  ) +
-  
-  theme_minimal(base_size = 12) +
-  theme(
-    plot.title = element_text(face = "bold", size = 14),
-    plot.title.position = "plot",
-    plot.subtitle = element_text(color = "grey30", margin = margin(b = 15)),
-    panel.grid.minor = element_blank(),
-    panel.grid.major.x = element_blank(),
-    axis.title.x = element_text(margin = margin(t = 10)),
-    axis.title.y = element_text(margin = margin(r = 10))
-  )
-
-# Rurality by tertile 
-
-# Build rurality tertiles — assuming you have a 1970 rurality variable
-# Adjust the variable name (e.g. sh_rural_70) to match your data
-df_facet <- df_plot %>%
-  filter(!is.na(sh_rural_70)) %>%
-  mutate(rurality_tertile = ntile(sh_rural_70, 3),
-         rurality_tertile = factor(rurality_tertile,
-                                   levels = 1:3,
-                                   labels = c("Urban",
-                                              "Mixed",
-                                              "Rural")))
-
-# Tertile colors matching your original plot
-tertile_colors <- c("Urban"  = "#E74C3C",
-                    "Mixed" = "#3498DB",
-                    "Rural" = "#27AE60")
-
-ggplot(df_facet, aes(x = mean_years, y = VoteShareNo)) +
-  # Points: only the panel's own tertile, colored
-  geom_point(aes(color = rurality_tertile), alpha = 0.6, size = 1.5) +
-  # Quadratic fit: restricted to the panel's tertile
-  geom_smooth(aes(color = rurality_tertile, fill = rurality_tertile),
-              method = "lm", formula = y ~ x + I(x^2),
-              se = TRUE, alpha = 0.2) +
-facet_wrap(~ rurality_tertile, nrow = 1, scales = "free_x") +
-  scale_color_manual(values = tertile_colors) +
-  scale_fill_manual(values = tertile_colors) +
-  labs(title = "Education and No vote, by rurality tertile",
-       subtitle = "Quadratic fits with 95% CIs",
-       x = "Mean years of education (municipality)",
-       y = "Vote share No") +
-  theme_minimal(base_size = 12) +
-  theme(plot.title = element_text(face = "bold"),
-        legend.position = "none",
-        strip.text = element_text(face = "bold"),
-        panel.spacing = unit(1.2, "lines"))
-
-# Votes and rurality 
-
-ggplot(df_plot, aes(x = sh_rural_70, y = VoteShareNo)) +
-  geom_point(aes(color = rural_tertile), alpha = 0.55, size = 1.8) +
-  geom_smooth(method = "loess", color = "grey25", fill = "grey25", 
-  alpha = 0.15) +
-  scale_color_brewer(palette = "Set1") +
-  labs(
-    x = "Rural share (1970)",
-    y = "Vote share No",
-    color = "Rurality tertile",
-    title = "No vote share by rurality per municipality"
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(legend.position = "bottom",
-        plot.title.position = "plot")
 ```
-
-
 
 FOR THE PAPER: 
 
@@ -1300,6 +1184,12 @@ prop_rango_long %>%
 
 
 ```{r}
+#| label: fig-burocrata-quadratic
+#| fig-cap: "Bureaucrat share vs opposition vote share with quadratic fit."
+#| fig-width: 6
+#| fig-height: 4
+#| warning: false
+#| message: false
 
 # Bureaucrat share vs Vote Share No
 ggplot(processeddata, aes(x = prop_burocrata, y = VoteShareNo)) +
@@ -1375,7 +1265,7 @@ ggplot(processeddata, aes(x = mean_years_pop, y = VoteShareNo)) +
 
 processeddata %>%
   select(VoteShareNo, prop_burocrata, share_high_among_buro, 
-  share_mid_among_buro, prop_high, prop_mid, sh_victims_total, lnDistRegCapital, share_allende70, pop_1987, sh_rural_70, mean_years_pop) %>%
+  share_mid_among_buro, prop_high, prop_mid, sh_victims_total, lnDistRegCapital, share_allende70, pop_1987, mean_years_pop) %>%
   summary()
 
 datasummary(
@@ -1389,7 +1279,6 @@ datasummary(
   (`Total victims / Pop. 1970` = sh_victims_total) +
   (`Ln distance to regional capital` = lnDistRegCapital) +
   (`Population 1987` = pop_1987) +
-  (`Share rural population 1970` = sh_rural_70) +
   (`Mean years of schooling per municipality` = mean_years_pop) ~
   Mean + SD + Min + Max + N,
   data = processeddata
@@ -1397,175 +1286,3 @@ datasummary(
 
 ```
 
-
-```{r}
-
-# Rurality per education 
-
-# Create tertiles 
-processeddata <- processeddata %>%
-  mutate(rural_tertile = cut(
-    sh_rural_70,
-    breaks = quantile(sh_rural_70, c(0, 1/3, 2/3, 1), na.rm = TRUE),
-    labels = c("Urban (low rural)", "Mixed", "Rural (high rural)"),
-    include.lowest = TRUE
-  ))
-
-# Plot: education vs No vote, by tertile
-ggplot(processeddata, aes(x = mean_years, y = VoteShareNo, 
-                    color = rural_tertile, fill = rural_tertile)) +
-  geom_point(alpha = 0.35, size = 1.5) +
-  geom_smooth(method = "lm", formula = y ~ x + I(x^2), 
-              alpha = 0.18, linewidth = 1.1) +
-  scale_color_brewer(palette = "Set1") +
-  scale_fill_brewer(palette = "Set1") +
-  labs(
-    x = "Mean years of education (commune)",
-    y = "Vote share No",
-    color = "Rurality tertile (1970)",
-    fill  = "Rurality tertile (1970)",
-    title = "Education and No vote, by rurality tertile",
-    subtitle = "Quadratic fits with 95% CIs"
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(legend.position = "bottom",
-        plot.title.position = "plot")
-
-```
-
-
-```{r}
-
-
-# Distribution of rurality
-
-# Calculate key stats for annotations
-n_total <- sum(!is.na(processeddata$sh_rural_70))
-n_fully_urban <- sum(processeddata$sh_rural_70 == 0, na.rm = TRUE)
-pct_fully_urban <- n_fully_urban / n_total
-median_rural <- median(processeddata$sh_rural_70, na.rm = TRUE)
-
-ggplot(processeddata, aes(x = sh_rural_70)) +
-  # Histogram in proportions (not density)
-  geom_histogram(aes(y = after_stat(count) / sum(after_stat(count))),
-                 bins = 25, fill = "#4A90C2", color = "white", alpha = 0.9) +
-  
-  # Shaded zones for substantive categories
-  annotate("rect", xmin = -2, xmax = 25, ymin = 0, ymax = Inf,
-           fill = "#E63946", alpha = 0.06) +
-  annotate("rect", xmin = 60, xmax = 102, ymin = 0, ymax = Inf,
-           fill = "#2A9D8F", alpha = 0.06) +
-  
-  # Median line
-  geom_vline(xintercept = median_rural, linetype = "dashed", 
-             color = "grey30", linewidth = 0.6) +
-  
-  # Zone labels at top
-  annotate("text", x = 12, y = 0.085, label = "URBAN", 
-           color = "#E63946", fontface = "bold", size = 3.8) +
-  annotate("text", x = 42, y = 0.085, label = "MIXED", 
-           color = "grey40", fontface = "bold", size = 3.8) +
-  annotate("text", x = 80, y = 0.085, label = "RURAL", 
-           color = "#2A9D8F", fontface = "bold", size = 3.8) +
-  
-  # Callout for the urban spike
-  annotate("curve", x = 15, y = 0.07, xend = 2, yend = pct_fully_urban + 0.003,
-           arrow = arrow(length = unit(0.2, "cm")), 
-           color = "grey30", curvature = 0.3) +
-  annotate("text", x = 22, y = 0.072, 
-           label = paste0(round(pct_fully_urban * 100), 
-           "% of communes\nare fully urban"),
-           hjust = 0, size = 3.3, color = "grey20") +
-  
-  # Median callout
-  annotate("text", x = median_rural + 1, y = 0.06, 
-           label = paste0("Median: ", round(median_rural), "%"),
-           hjust = 0, size = 3.3, color = "grey20", fontface = "italic") +
-  
-  scale_y_continuous(labels = percent_format(accuracy = 1),
-                     expand = expansion(mult = c(0, 0.05))) +
-  scale_x_continuous(breaks = seq(0, 100, 25),
-                     labels = c("0%\n(fully urban)", "25%", "50%", "75%", 
-                     "100%\n(fully rural)"),
-                     expand = c(0.01, 0.01)) +
-  
-  labs(
-    x = "Share of commune population living in rural areas (1970)",
-    y = "Share of communes",
-    title = "Chilean communes were sharply bimodal in 1970",
-    subtitle = "Most communes were either heavily rural or fully urban — 
-    few sat in between"
-  ) +
-  
-  theme_minimal(base_size = 12) +
-  theme(
-    plot.title = element_text(face = "bold", size = 14),
-    plot.title.position = "plot",
-    plot.subtitle = element_text(color = "grey30", margin = margin(b = 15)),
-    panel.grid.minor = element_blank(),
-    panel.grid.major.x = element_blank(),
-    axis.title.x = element_text(margin = margin(t = 10)),
-    axis.title.y = element_text(margin = margin(r = 10))
-  )
-
-# Rurality by tertile 
-
-# Build rurality tertiles — assuming you have a 1970 rurality variable
-# Adjust the variable name (e.g. sh_rural_70) to match your data
-df_facet <- processeddata %>%
-  filter(!is.na(sh_rural_70)) %>%
-  mutate(rurality_tertile = ntile(sh_rural_70, 3),
-         rurality_tertile = factor(rurality_tertile,
-                                   levels = 1:3,
-                                   labels = c("Urban",
-                                              "Mixed",
-                                              "Rural")))
-
-# Tertile colors matching your original plot
-tertile_colors <- c("Urban"  = "#E74C3C",
-                    "Mixed" = "#3498DB",
-                    "Rural" = "#27AE60")
-
-ggplot(df_facet, aes(x = mean_years, y = VoteShareNo)) +
-  # Points: only the panel's own tertile, colored
-  geom_point(aes(color = rurality_tertile), alpha = 0.6, size = 1.5) +
-  # Quadratic fit: restricted to the panel's tertile
-  geom_smooth(aes(color = rurality_tertile, fill = rurality_tertile),
-              method = "lm", formula = y ~ x + I(x^2),
-              se = TRUE, alpha = 0.2) +
-facet_wrap(~ rurality_tertile, nrow = 1, scales = "free_x") +
-  scale_color_manual(values = tertile_colors) +
-  scale_fill_manual(values = tertile_colors) +
-  labs(title = "Education and No vote, by rurality tertile",
-       subtitle = "Quadratic fits with 95% CIs",
-       x = "Mean years of education (municipality)",
-       y = "Vote share No") +
-  theme_minimal(base_size = 12) +
-  theme(plot.title = element_text(face = "bold"),
-        legend.position = "none",
-        strip.text = element_text(face = "bold"),
-        panel.spacing = unit(1.2, "lines"))
-
-
-```
-
-
-```{r}
-
-# Votes and rurality 
-
-ggplot(processeddata, aes(x = sh_rural_70, y = VoteShareNo)) +
-  geom_point(aes(color = rural_tertile), alpha = 0.55, size = 1.8) +
-  geom_smooth(method = "loess", color = "grey25", fill = "grey25", 
-  alpha = 0.15) +
-  scale_color_brewer(palette = "Set1") +
-  labs(
-    x = "Rural share (1970)",
-    y = "Vote share No",
-    color = "Rurality tertile",
-    title = "No vote share by rurality per municipality"
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(legend.position = "bottom",
-        plot.title.position = "plot")
-```
