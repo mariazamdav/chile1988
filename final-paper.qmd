@@ -25,6 +25,8 @@ csl: chicago-author-date.csl
 
 ```{r, warning = FALSE, message = FALSE}
 
+# Code created with AI assistance
+
 # Reading in the data so I can graph directly from it 
 
 library(readr)
