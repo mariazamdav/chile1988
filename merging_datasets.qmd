@@ -555,52 +555,6 @@ bind_rows(
 
 ```
 
-```{r}
-#| label: fig-model3
-#| fig-cap: "Coefficient plot for Model 3: rank share per municipality population vs No vote share."
-#| fig-width: 7
-#| fig-height: 5
-#| warning: false
-#| message: false
-
-controls <- c("pop_1987", "lnDistRegCapital", "share_allende70", 
-              "mean_years_pop", "sh_victims_total")
-
-term_labels_prop <- c(
-  "prop_high"        = "High rank bureaucrats per municipality",
-  "prop_mid"         = "Mid rank bureaucrats per municipality",
-  "pop_1987"         = "Population 1987",
-  "lnDistRegCapital" = "Ln distance to regional capital",
-  "share_allende70"  = "Allende vote share 1970", 
-  "mean_years_pop"   = "Mean years of schooling"
-)
-
-term_order_prop <- c("pop_1987", "mean_years_pop", "lnDistRegCapital", 
-                     "share_allende70", "prop_mid", "prop_high")
-
-h <- bind_rows(
-  tidy_model(second_nocontrols_prop, "No Controls",   c("prop_high", "prop_mid")),
-  tidy_model(second_prop,            "With Controls", c("prop_high", "prop_mid", controls))
-) %>%
-  ggplot(aes(x = estimate, y = factor(term, levels = term_order_prop), 
-             color = model)) +
-  geom_point(size = 3, position = position_dodge(width = 0.5)) +
-  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
-                 height = 0.2, position = position_dodge(width = 0.5)) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
-  scale_y_discrete(labels = term_labels_prop) +
-  labs(title = "Bureaucrat Rank Share vs Vote Share No",
-       x = "Estimate (95% CI)", y = NULL, color = NULL) +
-  theme_minimal() +
-  theme(legend.position = "bottom",
-        legend.justification = "center",
-        legend.text = element_text(size = 6),
-        legend.key.size = unit(0.3, "cm"),
-        plot.margin = margin(t = 20, r = 5, b = 5, l = 5),
-        plot.title = element_text(size = 9, hjust = 0.5))
-
-print(h)
-```
 
 ```{r}
 # ------------------------------------------------------------------------------

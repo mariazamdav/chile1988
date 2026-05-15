@@ -18,6 +18,9 @@ header-includes: |
   \setlength{\parskip}{0pt}
   \usepackage{float}
   \setlength{\LTleft}{0.5in}
+  \AtBeginEnvironment{CSLReferences}{\setstretch{1}\setlength{\parskip}{4pt}}
+bibliography: references.bib
+csl: chicago-author-date.csl
 ---
 
 ```{r, warning = FALSE, message = FALSE}
@@ -33,6 +36,7 @@ library(kableExtra)
 library(broom)       
 library(modelsummary)
 library(scales)       
+
 
 processeddata <- read_csv("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/processeddata.csv")
 processedchilenos <- read_csv("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/Chilenos_Censo_1987.csv")
@@ -73,8 +77,7 @@ formula = VoteShareNo ~ prop_high + prop_mid + factor(IDProv),
 clusters = IDProv, weights = pop_1987)
 
 second_prop <- lm_robust(data = processeddata, 
-formula = VoteShareNo ~ prop_high + prop_mid + sh_victims_total + 
-  lnDistRegCapital + share_allende70 + pop_1987 + mean_years_pop + 
+formula = VoteShareNo ~ prop_high + prop_mid + sh_victims_total +  lnDistRegCapital + share_allende70 + pop_1987 + mean_years_pop + 
   factor(IDProv), 
   clusters = IDProv, weights = pop_1987)
 ```
@@ -85,7 +88,7 @@ formula = VoteShareNo ~ prop_high + prop_mid + sh_victims_total +
 \large\textbf{Introduction}
 \end{center}
 
-Occasionally, authoritarian regimes hold semi-competitive elections, often to seek benefits such as legitimacy () or internal stability (). As a voting base, bureaucrats are relatively easier to coerce because they depend on the state for their livelihood. A simplistic understanding of bureaucrats would lead us to believe that no state worker would risk voting against their authoritarian employer out of fear of losing their job. However, not all bureaucrats are created equal. I argue that bureaucrats’ political behavior, otherwise similar to that of non-bureaucrats, is moderated by two interacting characteristics: their risk of negative outcomes, determined by their rank and the political salience of their organization, and their level of risk tolerance. 
+Occasionally, authoritarian regimes hold semi-competitive elections, often to seek benefits such as legitimacy [@schedler2006] or internal stability [@cox2009]. As a voting base, bureaucrats are relatively easier to coerce because they depend on the state for their livelihood. A simplistic understanding of bureaucrats would lead us to believe that no state worker would risk voting against their authoritarian employer out of fear of losing their job. However, not all bureaucrats are created equal. I argue that bureaucrats’ political behavior, otherwise similar to that of non-bureaucrats, is moderated by two interacting characteristics: their risk of negative outcomes, determined by their rank and the political salience of their organization, and their level of risk tolerance. 
 
 Though my theory produces a plethora of testable hypotheses, I focus this paper on two initial ones due to data limitations. I first evaluate the general premise that state employment does not guarantee electoral support of the incumbent. Then, I examine whether rank is a moderating mechanism for this behavior. I argue that, because of their higher benefits and costs related to their position in government, higher-rank bureaucrats are more likely to support their authoritarian employer than lower rank bureaucrats. I test my hypotheses through municipality level voting and census data regarding the 1988 Chilean plebiscite, which resulted in the transition out of the Pinochet dictatorship. 
 
@@ -93,13 +96,13 @@ Though my theory produces a plethora of testable hypotheses, I focus this paper 
 \large\textbf{Theory and Hypotheses}
 \end{center}
 
-Rationally, we might expect that bureaucrats under authoritarianism will not risk their jobs by voting against their employer. However, not all bureaucrats are created equal. While my theory points at a few mechanisms of bureaucratic political behavior, I focus this paper in the rank mechanism.
+Rationally, we might expect that bureaucrats under authoritarianism will not risk their jobs by voting against their employer. However, differences in rank and function place bureaucrats under varying levels of risk that moderate their political behavior. While my theory points at a few mechanisms, I focus this paper in the rank mechanism.
 
 \noindent \textbf{Rank mechanism}
 
-Higher rank bureaucrats receive the most benefits from the regime. They are more likely to receive higher wages and government rents, both through legitimate and illegitimate sources. Additionally, if they were to be revealed as a traitor to a surviving authoritarian regime, Szakonyi (forthcoming) shows that punishments for technocrats are significantly harsher than for other bureaucrats. Higher rank bureaucrats also have the most to lose out of democratization: not only do they risk losing their positions in the state and the related benefits, but their high visibility also makes them prime targets for transitional justice trials. 
+Higher rank bureaucrats receive the most benefits from the regime. They are more likely to receive higher wages and government rents, both through legitimate and illegitimate sources. Additionally, if they were to be revealed as a traitor to a surviving authoritarian regime, [@szakonyi] shows that punishments for technocrats are significantly harsher than for other bureaucrats. Higher rank bureaucrats also have the most to lose out of democratization: not only do they risk losing their positions in the state and the related benefits, but their high visibility also makes them prime targets for transitional justice trials. 
 
-Instead, lower-rank bureaucrats receive less rents from the regime, hold less influence, are less harshly punished by betrayed dictators (Szakonyi forthcoming), and are less visible to those seeking transitional justice. In sum, a bureaucrat's rank directly affects their risk of suffering negative consequences from either being outed as opposition or an actual transition toward democracy. Therefore, the theory predicts the following initial hypotheses: 
+Instead, lower-rank bureaucrats receive less rents from the regime, hold less influence, are less harshly punished by betrayed dictators [@szakonyi], and are less visible to those seeking transitional justice. In sum, a bureaucrat's rank directly affects their risk of suffering negative consequences from either being outed as opposition or an actual transition toward democracy. Therefore, the theory predicts the following initial hypotheses: 
 
 \begin{singlespace}
 \noindent \textbf{H1:} State employment does not guarantee support for the incumbent. 
@@ -142,7 +145,7 @@ I obtained individual level data from the 1992 Chilean census, which allowed me 
 
 \textbf{2. 1988 plebiscite municipality-level voting records}
 
-Bautista et al. (2021) evaluated the relationship between repression and municipality level voting outcomes from the 1988 plebiscite. From their replication files, I obtained municipality level data on opposition vote shares; logged distance between municipalities and their regional capital; share of dictatorship victims relative to the 1970 population; vote shares of Allende, the last democratic president before the dictatorship; vote shares of Aylwin, the  opposition candidate during the first presidential election after Pinochet in 1989; and region that each municipality belongs to.
+@bautista2021 evaluated the relationship between repression and municipality level voting outcomes from the 1988 plebiscite. From their replication files, I obtained municipality level data on opposition vote shares; logged distance between municipalities and their regional capital; share of dictatorship victims relative to the 1970 population; vote shares of Allende, the last democratic president before the dictatorship; vote shares of Aylwin, the  opposition candidate during the first presidential election after Pinochet in 1989^[I repeat part of the analysis for this election in Figure 15 in the appendix.]; and region that each municipality belongs to.
 
 \vspace{1em}  
 
@@ -150,11 +153,11 @@ Bautista et al. (2021) evaluated the relationship between repression and municip
 \textbf{Variables I created from the data}
 \end{center}
 
-I used individual level data to create municipality level variables referencing people's residence in 1987, a year before the plebiscite. The variables I created are: average years of schooling; proportion of bureaucrats relative to municipal population; proportion of higher, middle, and lower rank bureaucrats relative to municipal population; and share of higher, middle, and lower rank bureaucrats relative to the total bureaucrats within a municipality. 
+I used individual level data to create municipality level variables referencing people's residence in 1987, a year before the plebiscite. The variables I created are: average years of schooling; proportion of bureaucrats relative to municipal population; proportion of higher, middle, and lower rank bureaucrats relative to municipal population; and share of higher, middle, and lower rank bureaucrats relative to the bureaucrats within a municipality. 
 
 \vspace{0.5em} 
 
-\noindent \textbf{Rank assignment:}  Based on years of schooling, I assigned higher rank to bureaucrats with a high school education or more, middle rank to those who completed primary school, and lower rank to those who did not complete their primary education. Figure X in the appendix shows the distribution of rank per municipality. 
+\noindent \textbf{Rank assignment:}  Based on years of schooling, I assigned higher rank to bureaucrats with a high school education or more, middle rank to those who completed primary school, and lower rank to those who did not complete their primary education. Figure 13 in the appendix shows the distribution of rank per municipality. 
 
 \begin{center}
 \large\textbf{Identification}
@@ -166,7 +169,7 @@ My identification relies on conditional ignorability. I assume that, conditional
 \large\textbf{Analysis}
 \end{center}
 
-I use OLS regressions with weights per municipality population, province fixed effects, and cluster-robust standard errors, type 2, at the province level. For all specifications, the municipality-level control variables are: share of victims relative to 1970 population, vote share of the president who Pinochet ousted, average years of schooling, logged distance to regional capital, and population. I run all specifications with and without controls.
+I use OLS regressions with weights per municipality population, province fixed effects, and cluster-robust standard errors, type 2, at the province level. For all specifications, the municipality-level control variables are: share of victims relative to 1970 population, vote share of the president who Pinochet ousted, average years of schooling, logged distance to regional capital, and population.^[For full transparency, I initially decided not to include a measure of rurality because I included distance to the regional capital and province fixed effects. I assumed the variation between these and rurality would be collinear. That being said, I did run this analysis at the last minute, and it changed my results. I did not have enough time to rewrite the paper with the updated results. In Table 4 and Figure 14 in the appendix, I report the estimates and coefficient plot with an additional measure of rurality included. I would like your feedback on how to decide which covariates to include.] I run all specifications with and without controls.
 
 To evaluate whether state employment is correlated with electoral support for the authoritarian (H1), I use the following specification:
 
@@ -176,10 +179,10 @@ Y_m = \alpha + \beta \, \delta_m +  \mathbf{X}_m' \gamma + \phi_p + \varepsilon_
 $$ 
 \end{singlespace}
 
-Where the outcome $Y_m$ represents the vote share for the opposition in the 1988 plebiscite, $\delta_m$ represents the proportion of bureaucrats out of the municipal population. $\mathbf{X}_m'$ represents all the controls mentioned previously, $\phi_p$ represents province-level fixed effects, and $\varepsilon_m$ represents the error. 
+Where the outcome $Y_m$ represents the municipal vote share for the opposition in the 1988 plebiscite, $\delta_m$ represents the proportion of bureaucrats out of the municipal population. $\mathbf{X}_m'$ represents all the controls mentioned previously, $\phi_p$ represents province-level fixed effects, and $\varepsilon_m$ represents the error. 
 
 
-To evaluate whether rank has any effect on electoral support for the authoritarian (H2), I run two specifications. In the first, the independent variable of interest is the municipality share of high- and mid-level bureaucrats \textit{out of the bureaucrats in that municipality}. 
+To evaluate whether rank has any effect on electoral support for the authoritarian (H2), I run two specifications. In the first, the independent variables of interest are the municipality shares of high- and mid-level bureaucrats \textit{out of the bureaucrats in that municipality}. 
 
 \begin{singlespace}
 $$
@@ -203,7 +206,7 @@ Where $\delta_m^{high-rank}$ is the share of high rank bureaucrats out of the mu
 \large\textbf{Empirical results}
 \end{center}
 
-Table X in the appendix shows all estimates and standard errors. 
+Table 3 in the appendix shows all estimates and standard errors. 
 
 ```{r, message = FALSE, warning = FALSE}
 #| fig-cap: "Comparison of all relevant coefficients from the three models, with and without controls."
@@ -268,23 +271,24 @@ print(p)
 
 \noindent \textbf{Evaluating H1: State employment does not guarantee support for the authoritarian.}
 
-As shown in Figure 1, the coefficients for the proportion of bureaucrats per municipality are all indistinguishable from zero with and without controls, as the theory predicted. While it is encouraging that the standard error is reduced after I introduce the control variables, it is still difficult to assert whether this coefficient is indistinguishable from zero because of noise or because of real randomness between the municipal proportion of bureaucrats and support for democracy.
+As shown in Figure 1, the coefficients for the proportion of bureaucrats per municipality are indistinguishable from zero with and without controls, as the theory predicted. While it is encouraging that the standard error is reduced after I introduce the control variables, it is still difficult to assert whether this coefficient is indistinguishable from zero because of noise or because of real randomness between the municipal proportion of bureaucrats and support for democracy.
 
 \vspace{0.5em} 
 
-\noindent \textbf{One robustness check:} In order to evaluate this question, I graph a scattterplot of both variables and fit both a linear and quadratic OLS regression. Under a linear fit, the slope of the regression is close to flat, and the relationship appears to be completely random.^[In this graph, I exclude an outlier located in Antarctica that had the highest proportion of bureaucrats and lowest support for the opposition. Figure X in the appendix shows the graph with the outlier included.] The quadratic fit (Figure X in the appendix) became statistically insignificant after I included the controls. 
-
+\noindent \textbf{One robustness check:} In order to evaluate this question, I graph a scattterplot of both variables and fit both a linear and quadratic OLS regression. Under a linear fit, the slope of the regression is close to flat, and the relationship appears to be completely random.^[In this graph, I exclude an outlier located in Antarctica that had the highest proportion of bureaucrats and lowest support for the opposition. Figure 17 in the appendix shows the graph with the outlier included.] However, I added a quadratic fit, which appears to be statistically significant (Table 5 in the appendix). The results of the quadratic fit suggest that the more negative result from the model with controls is not random, even if it remains indistinguishable from zero. This direction goes against theoretical predictions. 
 
 ```{r, message = FALSE, warning = FALSE}
 #| fig-cap: "Municipal bureaucrat share vs. opposition vote share. Cabo de Hornos excluded."
-#| fig-width: 3
-#| fig-height: 2
+#| fig-width: 5
+#| fig-height: 3
 
 processeddata |>
   filter(comuna != 71) |>
   ggplot(aes(x = prop_burocrata, y = VoteShareNo)) +
   geom_point(alpha = 0.5, color = "steelblue") +
   geom_smooth(method = "lm", se = TRUE, alpha = 0.1, color = "red") +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2, raw = TRUE),
+              se = TRUE, alpha = 0.1, color = "darkgreen") +
   labs(title = "Bureaucrat Share vs No Vote Share (1988)",
        x = "Proportion of Bureaucrats", y = "Vote Share No") +
   theme(legend.position = "left",
@@ -296,8 +300,6 @@ processeddata |>
       axis.title = element_text(size = 8),
       axis.text = element_text(size = 7)) +
   guides(color = guide_legend(ncol = 1))
-
-
 
 quad_fit <- lm(VoteShareNo ~ poly(prop_burocrata, 2, raw = TRUE) + sh_educ_12more + sh_victims_total + lnDistRegCapital + share_allende70 + pop_1987, 
                data = filter(processeddata, comuna != 71))
@@ -311,13 +313,13 @@ quad_fit <- lm(VoteShareNo ~ poly(prop_burocrata, 2, raw = TRUE) + sh_educ_12mor
 
 As explained, I evaluate this hypothesis through two specifications: 
 
-\noindent \textbf{Share of bureaucrats out of municipal bureaucrats:} The results from H2 are less straightforward. Figure X in the appendix shows a detailed view of the coefficients from the specification in which the independent variable is the rank share of bureaucrats among the total bureaucrats in the municipality. The relevant coefficients refer to high rank and middle rank bureaucrats relative to lower rank bureaucrats. While the theory predicted that these would show a negative direction, results show a positive direction that becomes statistically insignificant after including controls. According to these coefficients, as the share of high rank bureaucrats grows in the existing municipal bureaucracy, so should the vote share for the opposition. The theory had predicted the opposite.
+\noindent \textbf{Share of bureaucrats out of municipal bureaucrats:} The results from H2 are less straightforward. In the first specification, the relevant coefficients refer to high rank and middle rank bureaucrats relative to lower rank bureaucrats, out of the bureaucrats within each municipality. While the theory predicted that these would show a negative direction, results show a positive direction that becomes statistically insignificant after including controls. According to these coefficients, as the share of high rank bureaucrats grows in the existing municipal bureaucracy, so should the vote share for the opposition. The theory had predicted the opposite.
 
-\noindent \rightarrow $\,$ \textbf{Problem with using education as a proxy for rank:}  Initially, I had not included  *mean years of schooling* as a covariate, in which case the coefficients not only were positive, they were also statistically significant. Therefore, I evaluated the relationship between *mean years of schooling* per municipality and opposition vote share, and found that there is a clear quadratic relationship that peaks at around 8 years. After including  *mean years of schooling* as a covariate, the relevant coefficients for H2 become statistically insignificant. From this analysis, I concluded that, while interesting on its own, education has its own relationship with voting outcomes that is likely not a good proxy for me to evaluate the rank mechanisms I aim to understand in this paper. 
+\noindent \rightarrow $\,$ \textbf{Problem with using education as a proxy for rank:}  Initially, I had not included  *mean years of schooling* as a covariate, in which case the coefficients not only were positive, they were also statistically significant. Therefore, I evaluated the relationship between *mean years of schooling* per municipality and opposition vote share, and found that there is a clear quadratic relationship that peaks at around 8 years (Figure 16 in the appendix). After including  *mean years of schooling* as a covariate, the relevant coefficients for H2 become statistically insignificant. From this analysis, I concluded that, while interesting by itself, education has its own relationship with voting outcomes that is likely not a good proxy for me to evaluate the rank mechanisms I aim to understand in this paper. 
 
 \vspace{0.5em} 
 
-\noindent \textbf{Share of bureaucrats out of total municipal population:} When considering ranked bureaucrats per municipal population as the independent variables of interests, we get closer to the theoretical predictions. Both the coefficients from middle and high rank bureaucrats become more negative after including the covariates. The middle rank bureaucrat coefficient becomes statistically insignificant. The high rank bureaucrat becomes negative and statistically significant, though its p-value is  close to insignificance at 0.042. According to these coefficients, as the proportion of high rank bureaucrats grows relative to the total municipal population, so should the vote share for the authoritarian, which is in line with theoretical predictions. 
+\noindent \textbf{Share of bureaucrats out of total municipal population:} When considering ranked bureaucrats per municipal population as the independent variables of interest, we get closer to the theoretical predictions. Both the coefficients from middle and high rank bureaucrats become more negative after including the covariates. The middle rank bureaucrat coefficient becomes statistically insignificant. The high rank bureaucrat becomes negative and statistically significant, though its p-value is  close to insignificance at 0.042. According to these coefficients, as the proportion of high rank bureaucrats grows relative to the total municipal population, so should the vote share for the authoritarian, which is in line with theoretical predictions. 
 
 \begin{center}
 \large\textbf{Would this affect real life elections?}
@@ -484,21 +486,30 @@ bounds_table |>
   column_spec(1, width = "4cm")
 ```
 
-Given that I constructed the rank variable from the education variable, I was unable to include *mean years of schooling* as a covariate for the statistical analysis. However, the rest of the coefficients allow us to be optimistic about the robustness of the results. As shown in Table 2, the coefficient of municipal high rank bureaucrat proportion remains negative and statitically significant even after including additional covariates as strong as the municipal population, the distance from the municipality to the regional capital, and the share of victims from the dictatorship. The final covariate reflects the vote share of the last democratic president before the dictatorship. It makes sense that prior municipality level political preferences are a strong predictor of voting outcomes; I do not expect that the proportion or rank composition of bureaucrats will have a stronger effect on voting outcomes than political priors. 
+Given that I constructed the rank variable from the education variable, I was unable to include *mean years of schooling* as a covariate for the statistical analysis. However, the rest of the coefficients allow us to be optimistic about the robustness of the results. As shown in Table 2, the coefficient of municipal high rank bureaucrat proportion remains negative and statistically significant even after including additional covariates as strong as the municipal population, the distance from the municipality to the regional capital, and the share of victims from the dictatorship. The final covariate reflects the vote share of the last democratic president before the dictatorship. It makes sense that prior municipality level political preferences are a strong predictor of voting outcomes; I do not expect that the proportion or rank composition of bureaucrats will have a stronger effect on voting outcomes than political priors. 
 
 \begin{center}
 \large\textbf{Conclusion}
 \end{center}
 
-The results from this analysis give some glimmers of hope on the plausibility of my hypotheses. I showed that there is no obvious correlation between the municipal proportion of bureaucrats and voting outcomes, and that these results are robust after controlling for covariates. Unfortunately, I discovered that education is correlated with voting outcomes, which rendered it a not-ideal proxy for rank analysis. However, the coefficient signaling the impact of the municipal share of high-rank bureaucrats showed a significant, negative effect, in line with the theory. Furthermore, this coefficient showed moderate robustness on its own, and became more credible relative to its covariates. 
+This analysis produced mixed results regarding the plausibility of my hypotheses. First, it is not obvious that the relationship between the proportion of bureaucrats and the opposition vote share is orthogonal. Instead, I found a negative quadratic relationship. One theoretically aligned explanation for this is that the municipalities with the highest proportion of bureaucrats are likely to concentrate important government buildings, in which higher rank bureaucrats work. Because of the rank mechanism, these municipalities would report more support for the authoritarian. However, further research is needed to uncover the relationship between both variables. 
+
+Additionally, I unfortunately discovered that education is correlated with voting outcomes, which rendered it a not-ideal proxy for rank analysis. Still, the coefficient signaling the impact of the municipal share of high-rank bureaucrats showed a significant, negative effect, in line with the theory. Furthermore, this coefficient showed moderate robustness on its own, and became more credible relative to its covariates. 
 
 As far as next steps, I have a few options. The first option is to exploit the variation in the bureaucrat population by focusing the analysis in particular areas that are mostly composed of bureaucrats, such as isolated military bases or oil fields of state-owned companies. These locations would allow me to separate the political behavior of bureaucrats from that of non-bureaucrats. However, there are other important counfounders affecting these areas, such as increased authoritarian monitoring or inherent characteristics related to their bureaucratic task and not their rank. Finally, I would like to run a lab experiment in which I directly ask bureaucrats their vote choice under a randomized response technique. However, this final approach has its challenges; it is difficult to recruit a large enough sample of bureaucrats from a politically charged, historical government, and trust that social desirability bias won't affect their answers. 
 
 Whether bureaucrats vote for the dictatorships that employ them matters because it is a reflection of the risks that people are willing to take to protect democracy. If even the most state-reliant people are willing to express their true political opinions through the vote, society can have more confidence in the viability of elections as a way to show the unpopularity of oppressive governments. 
 
+\pagebreak
+
 \begin{center}
 \large\textbf{References}
 \end{center}
+
+\vspace{6pt}
+
+::: {#refs}
+:::
 
 \pagebreak
 
@@ -574,7 +585,7 @@ footnote(
 
 ```{r}
 #| label: fig-model1
-#| fig-cap: "Coefficient plot for Model 1: bureaucrat share and controls vs No vote share."
+#| fig-cap: "Coefficient plot: Proportion of bureaucrats and controls vs No vote share."
 #| fig-width: 7
 #| fig-height: 5
 #| warning: false
@@ -605,7 +616,7 @@ l <- bind_rows(
                  height = 0.2, position = position_dodge(width = 0.5)) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
   scale_y_discrete(labels = term_labels) +
-  labs(title = "Model 1: Bureaucrat Share vs Vote Share No",
+  labs(title = "Municipal Proportion of Bureaucrats vs Vote Share No",
        x = "Estimate (95% CI)", y = NULL, color = NULL) +
   theme_minimal() +
   theme(legend.position = "bottom",
@@ -620,7 +631,7 @@ print(l)
 
 ```{r}
 #| label: fig-model2
-#| fig-cap: "Coefficient plot for Model 2: rank share among bureaucrats vs No vote share."
+#| fig-cap:  "Coefficient plot: Rank share of bureaucrats out of bureaucrats in the municipality and controls vs No vote share."
 #| fig-width: 7
 #| fig-height: 5
 #| warning: false
@@ -656,7 +667,7 @@ m <- bind_rows(
                  height = 0.2, position = position_dodge(width = 0.5)) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
   scale_y_discrete(labels = term_labels) +
-  labs(title = "Bureaucrat Rank Composition vs Vote Share No",
+  labs(title = "Bureaucrat Rank Composition (Out of Municipal Bureaucrats) vs Vote Share No",
        x = "Estimate (95% CI)", y = NULL, color = NULL) +
   theme_minimal() +
   theme(legend.position = "bottom",
@@ -670,34 +681,120 @@ print(m)
 ```
 
 ```{r}
+#| fig-cap: "Coefficient plot: Rank proportion of bureaucrats out of the total municipal population vs No vote share."
+#| fig-width: 7
+#| fig-height: 5
+#| warning: false
+#| message: false
+
+controls <- c("pop_1987", "lnDistRegCapital", "share_allende70",  "mean_years_pop", "sh_victims_total")
+
+term_labels_prop <- c(
+  "prop_high"        = "High rank bureaucrats per municipality",
+  "prop_mid"         = "Mid rank bureaucrats per municipality",
+  "pop_1987"         = "Population 1987",
+  "lnDistRegCapital" = "Ln distance to regional capital",
+  "share_allende70"  = "Allende vote share 1970", 
+  "sh_victims_total" = "Total victims / Pop. 1970",
+  "mean_years_pop"   = "Mean years of schooling"
+)
+
+term_order_prop <- c("pop_1987", "mean_years_pop", "lnDistRegCapital",
+                     "share_allende70", "sh_victims_total",
+                     "prop_mid", "prop_high")
+
+y <- bind_rows(
+  tidy_model(second_nocontrols_prop, "No Controls",   c("prop_high", "prop_mid")),
+  tidy_model(second_prop,            "With Controls", c("prop_high", "prop_mid", controls))
+) %>%
+  ggplot(aes(x = estimate, y = factor(term, levels = term_order_prop), 
+             color = model)) +
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.2, position = position_dodge(width = 0.5)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  scale_y_discrete(labels = term_labels_prop) +
+  labs(title = "Bureaucrat Rank Share (Out of Total Municipal Population) vs Vote Share No",
+       x = "Estimate (95% CI)", y = NULL, color = NULL) +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.justification = "center",
+        legend.text = element_text(size = 6),
+        legend.key.size = unit(0.3, "cm"),
+        plot.margin = margin(t = 20, r = 5, b = 5, l = 5),
+        plot.title = element_text(size = 9, hjust = 0.5))
+
+print(y)
+
+
+```
+
+\pagebreak 
+
+```{r}
 #| fig-cap: "Sensitivity analysis: Bureaucrat share."
 #| fig-width: 6
 #| fig-height: 5
+#| fig-align: center
 #| warning: false
 #| message: false
 
 plot(sens_first, sensitivity.of = "t-value")
 ```
 
+\pagebreak 
+
 ```{r}
 #| fig-cap: "Sensitivity analysis: High rank bureaucrat share out of bureaucrats in the municipality."
 #| fig-width: 6
 #| fig-height: 5
+#| fig-align: center
 #| warning: false
 #| message: false
 
 plot(sens_second_high, sensitivity.of = "t-value")
 ```
 
+\pagebreak 
+
 ```{r}
 #| fig-cap: "Sensitivity analysis: Middle rank bureaucrat share out of bureaucrats in the municipality."
 #| fig-width: 6
 #| fig-height: 5
+#| fig-align: center
 #| warning: false
 #| message: false
 
 plot(sens_second_mid, sensitivity.of = "t-value")
 ```
+
+\pagebreak 
+
+```{r}
+#| fig-cap: "Sensitivity analysis: High rank bureaucrat proportion out of municipal population."
+#| fig-width: 6
+#| fig-height: 5
+#| fig-align: center
+#| warning: false
+#| message: false
+
+plot(sens_third_high, sensitivity.of = "t-value")
+```
+
+\pagebreak 
+
+```{r}
+#| fig-cap: "Sensitivity analysis: Middle rank bureaucrat proportion out of municipal population."
+#| fig-width: 6
+#| fig-height: 5
+#| fig-align: center
+#| warning: false
+#| message: false
+
+plot(sens_second_mid, sensitivity.of = "t-value")
+```
+
+\pagebreak 
 
 ```{r}
 #| fig-cap: "Sensitivity analysis: High rank bureaucrat proportion out of municipal population."
@@ -709,15 +806,232 @@ plot(sens_second_mid, sensitivity.of = "t-value")
 plot(sens_third_high, sensitivity.of = "t-value")
 ```
 
+\pagebreak 
+
 ```{r}
 #| fig-cap:  "Sensitivity analysis: Middle rank bureaucrat proportion out of municipal population."
 #| fig-width: 6
 #| fig-height: 5
 #| warning: false
 #| message: false
+#| results: hide
 
 plot(sens_second_mid, sensitivity.of = "t-value")
 ```
+
+
+
+```{r, message = FALSE, warning = FALSE}
+#| label: fig-rank-variation
+#| fig-cap: "Variation in bureaucrat rank share across municipalities."
+#| fig-width: 7
+#| fig-height: 4
+#| warning: false
+#| message: false
+
+
+
+prop_burocratax <- processedchilenos %>%
+  group_by(Comuna_1987_Origen3) %>%
+  summarise(
+# Proportion of bureaucrats per municipality
+    prop_burocrata = as.numeric(mean(burocrata, na.rm = TRUE)),
+# Proportion of bureaucrats per rank per municipality,
+    prop_high = as.numeric(mean(burocrata & rango == "high", na.rm = TRUE)),
+    prop_mid  = as.numeric(mean(burocrata & rango == "mid",  na.rm = TRUE)),
+    prop_low  = as.numeric(mean(burocrata & rango == "low",  na.rm = TRUE)),
+# Population per municipality
+    pop_1987  = n(),
+# Mean years of schooling per municipality
+    mean_years_pop = mean(years_schooling, na.rm = TRUE)
+  )
+
+
+k <- prop_burocratax %>%
+  pivot_longer(cols = c(prop_high, prop_mid, prop_low),
+               names_to = "rango", values_to = "proportion") %>%
+  mutate(rango = recode(rango,
+                        prop_high = "High Rank",
+                        prop_mid  = "Mid Rank",
+                        prop_low  = "Low Rank")) %>%
+  ggplot(aes(x = reorder(as.character(Comuna_1987_Origen3), proportion), 
+             y = proportion, color = rango)) +
+  geom_point(size = 0.8, alpha = 0.6) +
+  facet_wrap(~rango) +
+  ylim(0, max(prop_burocratax$prop_high, prop_burocratax$prop_mid, 
+              prop_burocratax$prop_low, na.rm = TRUE)) +
+  labs(title = "Bureaucrat Rank Share by Municipality",
+       x = NULL, y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = "none")
+
+print(k)
+```
+
+
+```{r}
+# Running the regressions 
+first_nocontrols_rural <- lm_robust(data = processeddata, 
+formula = VoteShareNo ~ prop_burocrata + factor(IDProv), se_type = "CR2",
+clusters = IDProv, weights = pop_1987)
+
+first_rural <- lm_robust(data = processeddata, 
+formula = VoteShareNo ~ prop_burocrata + sh_victims_total + mean_years_pop +
+  lnDistRegCapital + share_allende70 + pop_1987 + sh_rural_70 + 
+  factor(IDProv), 
+  se_type = "CR2", clusters = IDProv, weights = pop_1987)
+
+second_nocontrols_rural <- lm_robust(data = processeddata, 
+formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro + 
+  factor(IDProv), 
+se_type = "CR2", clusters = IDProv, weights = pop_1987)
+
+second_rural <- lm_robust(data = processeddata, 
+formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro +
+  sh_victims_total + lnDistRegCapital + share_allende70 + pop_1987 + 
+  mean_years_pop + sh_rural_70 + factor(IDProv), 
+  se_type = "CR2", clusters = IDProv, weights = pop_1987)
+
+second_nocontrols_prop_rural <- lm_robust(data = processeddata, 
+formula = VoteShareNo ~ prop_high + prop_mid + factor(IDProv), 
+clusters = IDProv, weights = pop_1987)
+
+second_prop_rural <- lm_robust(data = processeddata, 
+formula = VoteShareNo ~ prop_high + prop_mid + sh_victims_total + 
+  lnDistRegCapital + share_allende70 + pop_1987 + mean_years_pop + 
+  sh_rural_70 + factor(IDProv), 
+  clusters = IDProv, weights = pop_1987)
+```
+
+
+```{r, messaging = FALSE, warning = FALSE}
+#| fig-cap: "Comparison of all relevant coefficients from the three models, with and without controls, including rurality."
+
+term_labels <- c(
+  "prop_burocrata"        = "Prop. all bureaucrats",
+  "share_high_among_buro" = "High rank share",
+  "share_mid_among_buro"  = "Mid rank share",
+  "prop_high"             = "High rank prop.",
+  "prop_mid"              = "Mid rank prop."
+)
+
+term_order <- c("prop_mid", "prop_high", "share_mid_among_buro", 
+                "share_high_among_buro", "prop_burocrata")
+
+r <- bind_rows(
+  tidy_model(first_nocontrols_rural,        "No Controls",   
+  "prop_burocrata"),
+  tidy_model(first_rural,                   "With Controls", 
+  "prop_burocrata"),
+  tidy_model(second_nocontrols_rural,       "Among bureaucrats - No Controls",  
+   c("share_high_among_buro", "share_mid_among_buro")),
+  tidy_model(second_rural,                  "Among bureaucrats - With Controls",
+   c("share_high_among_buro", "share_mid_among_buro")),
+  tidy_model(second_nocontrols_prop_rural,  "Among population - No Controls",  
+   c("prop_high", "prop_mid")),
+  tidy_model(second_prop_rural,             "Among population - With Controls", 
+  c("prop_high", "prop_mid"))
+) %>%
+  ggplot(aes(x = estimate, y = factor(term, levels = term_order), 
+  color = model)) +
+  geom_point(size = 3, position = position_dodge(width = 0.7)) +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.2, position = position_dodge(width = 0.7)) +
+  geom_text(
+    data = . %>% filter(term == "prop_high", grepl("With Controls", model)),
+    aes(label = round(estimate, 3)),
+    position = position_dodge(width = 0.7),
+    vjust = -1.5, hjust = 0.6, size = 3.5, color = "black", fontface = "bold",
+    show.legend = FALSE
+  ) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  scale_y_discrete(labels = term_labels) +
+  scale_color_brewer(palette = "Paired") +
+  labs(title = "Bureaucrat Composition vs Vote Share No 1988",
+       x = "Estimate (95% CI)", y = NULL, color = NULL) +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.justification = "center",
+        legend.text = element_text(size = 6),
+        legend.key.size = unit(0.3, "cm"),
+        legend.spacing.x = unit(0.1, "cm"),
+        legend.margin = margin(l = 20),
+        plot.margin = margin(t = 20, r = 5, b = 5, l = 5),
+        plot.title = element_text(size = 9, hjust = 0.5)) +
+  guides(color = guide_legend(ncol = 3))
+
+print(r)
+
+```
+
+
+```{r}
+#| tbl-pos: "H"
+#| label: tbl-mainresults-rural
+#| tbl-cap: "Bureaucratic Composition and the No Vote Share, 1988 Plebiscite, rurality included"
+#| warning: false
+#| message: false
+
+coef_map <- c(
+  "prop_burocrata"        = "Bureaucrat share",
+  "share_high_among_buro" = "High-rank share (among bureaucrats)",
+  "share_mid_among_buro"  = "Mid-rank share (among bureaucrats)",
+  "prop_high"             = "High-rank share (per municipality pop.)",
+  "prop_mid"              = "Mid-rank share (per municipality pop.)",
+  "sh_victims_total"      = "Total victims / pop. 1970",
+  "share_allende70"       = "Allende vote share 1970",
+  "lnDistRegCapital"      = "Ln distance to regional capital",
+  "pop_1987"              = "Population 1987",
+  "mean_years_pop"        = "Mean years of schooling",
+  "sh_rural_70"           = "Rural population share 1970"
+)
+
+gof_map <- tribble(
+  ~raw,        ~clean,  ~fmt,
+  "nobs",      "N",     0,
+  "r.squared", "R²",    3
+)
+
+modelsummary(
+  list(
+    "(1)" = first_nocontrols_rural, "(2)" = first_rural,
+    "(3)" = second_nocontrols_rural, "(4)" = second_rural,
+    "(5)" = second_nocontrols_prop_rural, "(6)" = second_prop_rural
+  ),
+  coef_map = coef_map,
+  gof_map  = gof_map,
+  stars    = c("*" = .1, "**" = .05, "***" = .01),
+  fmt      = 4,
+  output   = "kableExtra",
+  booktabs = TRUE
+) |>
+  add_header_above(c(
+    " "                                           = 1,
+    "Bureaucrat share"                   = 2,
+    "Rank share (among bureaucrats)"     = 2,
+    "Rank share (per municipality pop.)" = 2
+  )) |>
+  add_header_above(c(
+    " "           = 1,
+    "No controls" = 1, "Controls" = 1,
+    "No controls" = 1, "Controls" = 1,
+    "No controls" = 1, "Controls" = 1
+  )) |>
+  footnote(
+    general = "Province fixed effects included in all models. Standard errors clustered at province level (CR2). Observations weighted by 1987 municipality population.",
+    general_title     = "Note: ",
+    footnote_as_chunk = TRUE,
+    threeparttable    = FALSE,
+    escape            = TRUE
+  ) |>
+  kable_styling(
+    latex_options = c("HOLD"),
+    font_size = 7
+  )
+```
+
 
 
 ```{r}
@@ -805,54 +1119,6 @@ a <- bind_rows(
 print(a)
 ```
 
-```{r}
-#| label: fig-rank-variation
-#| fig-cap: "Variation in bureaucrat rank share across municipalities."
-#| fig-width: 7
-#| fig-height: 4
-#| warning: false
-#| message: false
-
-
-
-prop_burocratax <- processedchilenos %>%
-  group_by(Comuna_1987_Origen3) %>%
-  summarise(
-# Proportion of bureaucrats per municipality
-    prop_burocrata = as.numeric(mean(burocrata, na.rm = TRUE)),
-# Proportion of bureaucrats per rank per municipality,
-    prop_high = as.numeric(mean(burocrata & rango == "high", na.rm = TRUE)),
-    prop_mid  = as.numeric(mean(burocrata & rango == "mid",  na.rm = TRUE)),
-    prop_low  = as.numeric(mean(burocrata & rango == "low",  na.rm = TRUE)),
-# Population per municipality
-    pop_1987  = n(),
-# Mean years of schooling per municipality
-    mean_years_pop = mean(years_schooling, na.rm = TRUE)
-  )
-
-
-k <- prop_burocratax %>%
-  pivot_longer(cols = c(prop_high, prop_mid, prop_low),
-               names_to = "rango", values_to = "proportion") %>%
-  mutate(rango = recode(rango,
-                        prop_high = "High Rank",
-                        prop_mid  = "Mid Rank",
-                        prop_low  = "Low Rank")) %>%
-  ggplot(aes(x = reorder(as.character(Comuna_1987_Origen3), proportion), 
-             y = proportion, color = rango)) +
-  geom_point(size = 0.8, alpha = 0.6) +
-  facet_wrap(~rango) +
-  ylim(0, max(prop_burocratax$prop_high, prop_burocratax$prop_mid, 
-              prop_burocratax$prop_low, na.rm = TRUE)) +
-  labs(title = "Bureaucrat Rank Share by Municipality",
-       x = NULL, y = "Proportion") +
-  theme_minimal() +
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        legend.position = "none")
-
-print(k)
-```
 
 ```{r}
 #| label: fig-education-quadratic
@@ -880,10 +1146,11 @@ o <- ggplot(processeddata, aes(x = mean_years_pop, y = VoteShareNo)) +
        x = "Mean Years of Schooling",
        y = "Vote Share No") +
   theme_minimal(base_size = 13) +
-  theme(plot.title = element_text(face = "bold"))
+  theme(plot.title = element_text(size = 9, hjust = 0.5))
 
 print(o)
 ```
+
 
 ```{r}
 #| fig-cap: "Bureaucrat share vs opposition vote share with outlier."
@@ -892,15 +1159,20 @@ print(o)
 #| warning: false
 #| message: false
 
-# Bureaucrat share vs Vote Share No
 ggplot(processeddata, aes(x = prop_burocrata, y = VoteShareNo)) +
   geom_point(alpha = 0.5, color = "steelblue") +
-  geom_smooth(color = "red", method = "lm", se = TRUE, alpha = 0.1) +
+  geom_smooth(color = "red", method = "lm", formula = y ~ x,
+              se = TRUE, alpha = 0.1) +
+  geom_smooth(color = "darkgreen", method = "lm", formula = y ~ poly(x, 2),
+              se = TRUE, alpha = 0.1) +
   labs(title = "Bureaucrat Share vs No Vote Share (1988)",
        x = "Proportion of Bureaucrats", y = "Vote Share No") +
   theme_minimal()
 
 ```
+ 
+
+\pagebreak 
 
 ```{r}
 #| label: tbl-quadratic
