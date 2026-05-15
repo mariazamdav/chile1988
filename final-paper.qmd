@@ -315,7 +315,7 @@ As explained, I evaluate this hypothesis through two specifications:
 
 \noindent \textbf{Share of bureaucrats out of municipal bureaucrats:} The results from H2 are less straightforward. In the first specification, the relevant coefficients refer to high rank and middle rank bureaucrats relative to lower rank bureaucrats, out of the bureaucrats within each municipality. While the theory predicted that these would show a negative direction, results show a positive direction that becomes statistically insignificant after including controls. According to these coefficients, as the share of high rank bureaucrats grows in the existing municipal bureaucracy, so should the vote share for the opposition. The theory had predicted the opposite.
 
-\noindent \rightarrow $\,$ \textbf{Problem with using education as a proxy for rank:}  Initially, I had not included  *mean years of schooling* as a covariate, in which case the coefficients not only were positive, they were also statistically significant. Therefore, I evaluated the relationship between *mean years of schooling* per municipality and opposition vote share, and found that there is a clear quadratic relationship that peaks at around 8 years (Figure 16 in the appendix). After including  *mean years of schooling* as a covariate, the relevant coefficients for H2 become statistically insignificant. From this analysis, I concluded that, while interesting by itself, education has its own relationship with voting outcomes that is likely not a good proxy for me to evaluate the rank mechanisms I aim to understand in this paper. 
+\noindent \rightarrow $\,$ \textbf{Problem with using education as a proxy for rank:}  Initially, I had not included  *mean years of schooling* as a covariate, in which case the coefficients not only were positive, they were also statistically significant (Figure 18 in the appendix). Therefore, I evaluated the relationship between *mean years of schooling* per municipality and opposition vote share, and found that there is a clear quadratic relationship that peaks at around 8 years (Figure 16 in the appendix). After including  *mean years of schooling* as a covariate, the relevant coefficients for H2 become statistically insignificant. From this analysis, I concluded that, while interesting by itself, education has its own relationship with voting outcomes that is likely not a good proxy for me to evaluate the rank mechanisms I aim to understand in this paper. 
 
 \vspace{0.5em} 
 
@@ -1213,4 +1213,72 @@ modelsummary(
     latex_options = c("hold_position"),
     font_size     = 9
   )
+```
+
+```{r}
+#| label: fig-second-noeducation
+#| fig-cap: "Comparison of relevant coefficients from models without education covariate, No vote share 1988. IV is rank share out of municipal bureaucrats."
+#| warning: false
+#| message: false
+
+# ------------------------------------------------------------------------------
+# REGRESSIONS 
+# ------------------------------------------------------------------------------
+
+second_nocontrols_noeducation <- lm_robust(data = processeddata, 
+  formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro + 
+    factor(IDProv), 
+  se_type = "CR2", clusters = IDProv, weights = pop_1987)
+
+second_noeducation <- lm_robust(data = processeddata, 
+  formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro +
+    sh_victims_total + lnDistRegCapital + share_allende70 + pop_1987 + factor(IDProv), 
+  se_type = "CR2", clusters = IDProv, weights = pop_1987)
+
+# ------------------------------------------------------------------------------
+# GRAPH
+# ------------------------------------------------------------------------------
+
+controls <- c("pop_1987", "lnDistRegCapital", "share_allende70", "sh_victims_total")
+
+term_labels <- c(
+  "share_high_among_buro" = "High rank",
+  "share_mid_among_buro"  = "Mid rank",
+  "pop_1987"              = "Population 1987",
+  "lnDistRegCapital"      = "Ln distance to reg. cap.",
+  "share_allende70"       = "Allende vote share 1970",
+  "sh_victims_total"      = "Total victims / Pop. 1970"
+)
+
+term_order <- c("pop_1987", "lnDistRegCapital",
+  "share_allende70", "sh_victims_total", "share_mid_among_buro",
+  "share_high_among_buro")
+
+f <- bind_rows(
+  tidy_model(second_nocontrols_noeducation, "No Controls",   c("share_high_among_buro",
+    "share_mid_among_buro")),
+  tidy_model(second_noeducation,            "With Controls", c("share_high_among_buro",
+    "share_mid_among_buro", controls))
+) %>%
+  ggplot(aes(x = estimate, y = factor(term, levels = term_order), color = model)) +
+  geom_point(size = 3, position = position_dodge(width = 0.7)) +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.2, position = position_dodge(width = 0.7)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  scale_y_discrete(labels = term_labels) +
+  scale_color_brewer(palette = "Paired") +
+  labs(title = "Bureaucrat Rank Composition vs No Vote Share, No Education Covariate",
+       x = "Estimate (95% CI)", y = NULL, color = NULL) +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.justification = "center",
+        legend.text = element_text(size = 6),
+        legend.key.size = unit(0.3, "cm"),
+        legend.spacing.x = unit(0.1, "cm"),
+        legend.margin = margin(l = 20),
+        plot.margin = margin(t = 20, r = 5, b = 5, l = 5),
+        plot.title = element_text(size = 9, hjust = 0.5)) +
+  guides(color = guide_legend(ncol = 2))
+
+print(f)
 ```

@@ -1,0 +1,287 @@
+---
+title: "Data cleaning"
+author: "Maria Zambrano Davila" 
+format: html
+---
+
+Code created with AI assistance. 
+
+```{r, message = FALSE, warning = FALSE}
+library(dplyr)
+library(haven)     
+library(sf)       
+library(tidyr)     
+```
+
+```{r}
+
+# ------------------------------------------------------------------------------
+# Downloading the data 
+# ------------------------------------------------------------------------------
+# CENSUS DATA 
+# ------------------------------------------------------------------------------
+
+# Data by individual 
+Personas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/PERSONA.sav",
+ col_select = c(Comuna_1987_Origen3, Tipo_educacion, Curso, Rama_actividad,
+  Ocupacion))
+
+# Only observations from Chileans who lived in Chile in 1987
+Chilenos_Censo_1987 <-Personas_Censo_1992 %>%
+  filter(Comuna_1987_Origen3 >= 1101 & Comuna_1987_Origen3 <= 13605, 
+         Comuna_1987_Origen3 %% 100 != 0)
+
+# ------------------------------------------------------------------------------
+# DATA FROM THE PAPER REPLICATION 
+# ------------------------------------------------------------------------------
+
+# Voting data by municipality
+VotingData_Dataverse <- read_dta("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/FinalDatasetForReplication.dta",
+col_select = c(comuna, IDProv, VoteShareNo, shvictimas_until74_70, 
+shvictimas_75_plus_70, lnDistRegCapital, share_allende70,
+longitud, latitud, sh_rural_70, share_aylwin89, sh_educ_12more))
+
+# Read shapefile for geometry 
+Comunas_Dataverse <- st_read("C:/Users/mlzam/OneDrive/Documents/Files/MIT/spring 26/quant 2/chile1988/dataverse_files (3)/Paper Replication/Data/Map/cl_comunas_geo/Paper Replication/Data/Map/cl_comunas_geo.shp",
+query = "SELECT ID_2002, NOMBRE FROM cl_comunas_geo")
+
+# Municipality codes from 1992 census 
+Comunas_Censo_1992 <- read_sav("C:/Users/mlzam/OneDrive/Documents/repos/chile1988/data/COMUNAS.sav",
+  col_select = c(Codigo, Nombre))
+
+# ------------------------------------------------------------------------------
+```
+
+
+```{r}
+
+# ------------------------------------------------------------------------------
+# Prepping the data 
+# ------------------------------------------------------------------------------
+# First, find each municipality's numerical ID and attach it to the 
+# municipality voting data 
+# ------------------------------------------------------------------------------
+# The municipalities file comes in polygon shape
+# Do some conversions to match both databases 
+
+# Convert Dataverse voting data to spatial object using lat/lon columns
+Dataverse_temp <- VotingData_Dataverse |>
+  st_as_sf(coords = c("longitud", "latitud"), crs = 4326)
+
+# Use flat geometry instead of spherical to avoid errors
+sf_use_s2(FALSE)
+
+# Fix any invalid polygon geometries in the shapefile before joining
+Comunas_Dataverse <- st_make_valid(Comunas_Dataverse)
+
+# Spatial join: for each voting data point, find which municipality polygon 
+# it falls inside and attach that comuna's ID_2002 and name
+crosswalk <- st_join(Dataverse_temp, Comunas_Dataverse |>
+  select(ID_2002, NOMBRE)) |>
+  st_drop_geometry() |>    # Drop geometry, no longer needed
+  select(comuna, ID_2002, NOMBRE)  # Keep only the three columns I need
+
+# Fix NAs manually, then drop unresolvable ones
+crosswalk <- crosswalk |>
+  mutate(
+    ID_2002 = case_when(
+      comuna == 53  ~ "1101",  # Iquique
+      comuna == 54  ~ "10209", # Quemchi
+      comuna == 93  ~ "10101", # Puerto Montt
+      comuna == 147 ~ "13403", # Calera de Tango
+      comuna == 175 ~ "2102",  # Mejillones
+      comuna == 184 ~ "11202", # Cisnes
+      comuna == 298 ~ "10210", # Quinchao
+      comuna == 87 ~ "5104",  # Juan Fernández
+      TRUE ~ ID_2002
+    ),
+    NOMBRE = case_when(
+      comuna == 53  ~ "Iquique",
+      comuna == 54  ~ "Quemchi",
+      comuna == 93  ~ "Puerto Montt",
+      comuna == 147 ~ "Calera de Tango",
+      comuna == 175 ~ "Mejillones",
+      comuna == 184 ~ "Cisnes",
+      comuna == 298 ~ "Quinchao",
+      comuna == 87 ~ "Juan Fernández", 
+      TRUE ~ NOMBRE
+    )
+  ) |>
+  filter(!is.na(ID_2002))
+
+# Merge municipality ID into municipality voting data 
+VotingData_Dataverse <- VotingData_Dataverse |>
+  left_join(crosswalk, by = "comuna")
+
+# ------------------------------------------------------------------------------
+
+
+
+```
+
+
+```{r}
+# ------------------------------------------------------------------------------
+# Sanity check: Verify that ID_2002 codes from the shapefile 
+# match the codes in the 1992 census
+# ------------------------------------------------------------------------------
+
+# Step 1: Randomly sample 10 comuna codes from the shapefile
+sample_ids <- Comunas_Dataverse |> st_drop_geometry() |> 
+  slice_sample(n = 10) |> pull(ID_2002)
+
+# Step 2: Look up those 10 codes in the shapefile
+# Shows what names the shapefile assigns them
+Comunas_Dataverse |> st_drop_geometry() |> 
+  filter(ID_2002 %in% sample_ids) |> select(ID_2002, NOMBRE)
+
+# Step 3: Look up those same 10 codes in the census
+# If names match, the coding systems are the same
+Comunas_Censo_1992 |> filter(Codigo %in% sample_ids) |> select(Codigo, Nombre)
+
+# ------------------------------------------------------------------------------
+```
+
+```{r}
+# ------------------------------------------------------------------------------
+# Creating variables for analysis
+# ------------------------------------------------------------------------------
+# Years of schooling
+# ------------------------------------------------------------------------------
+
+Chilenos_Censo_1987 <- Chilenos_Censo_1987 %>%
+  mutate(
+    years_schooling = case_when(
+          Tipo_educacion %in% 0:1  ~ 0,          # Never attended or kinder
+          Tipo_educacion == 2      ~ Curso,      # Middle/elementary school
+          Tipo_educacion %in% 3:11 ~ 8 + Curso,  # All high school types
+          Tipo_educacion %in% 12:14 ~ 12 + Curso # College and related
+        ),
+# Separating years of schooling into categories
+    rango = case_when(
+          years_schooling >= 13              ~ "high",
+          years_schooling >= 9 & years_schooling <= 12 ~ "mid",
+          years_schooling <= 8               ~ "low"
+        ))
+
+# ------------------------------------------------------------------------------
+# Separating bureaucrats
+# ------------------------------------------------------------------------------
+
+Chilenos_Censo_1987 <- Chilenos_Censo_1987 %>%
+  mutate(burocrata = 
+    Rama_actividad %in% c(
+      750, 751, 752, 753,  # Public administration and defense
+      800, 801, 802, 803,  # Education
+      809                  # Adult education and other types
+    ) |
+    Ocupacion %in% c(
+      # Military & police
+      110,   # Armed forces, Police, Investigations
+      5162,  # Police
+      5163,  # Prison guards
+
+      # Executive, legislative, public admin
+      1100,  # Members of executive/legislative and public administration
+      1110,  # Members of executive and legislative powers
+      1120,  # Senior public administration officials
+      1130,  # Heads of small communities
+
+      # Legal system
+      2422,  # Judges
+      2429,  # Legal professionals (except lawyers and judges)
+      3432,  # Legal technical assistants
+      3439,  # Diplomats/consular officials
+
+      # Education
+      2310,  # University/higher education professors
+      2320,  # Secondary school teachers
+      2330,  # Primary and preschool teachers
+      2331,  # Primary school teachers
+      2332,  # Preschool teachers
+      2340,  # Special education teachers
+      2350,  # Other education professionals
+      2351,  # Pedagogical methods specialists
+      2352,  # General education inspectors
+      3310,  # Higher ed teaching assistants and secondary para-teachers
+      3311,  # Higher education teaching assistants
+      3312,  # Secondary teaching assistants
+      3320,  # Primary and preschool teaching assistants
+      3321,  # Primary teaching assistants
+      3322,  # Preschool teaching assistants
+      3330,  # Special education teaching assistants
+      3340,  # Technical instructors outside regular education
+
+      # Healthcare
+      2221,  # Physicians and surgeons
+      2225,  # University nutritionists
+      2226,  # University medical technologists
+      2227,  # University physiotherapists/kinesiologists
+      2231,  # Professional nurses
+      2232,  # Professional midwives
+      3221,  # Medical practitioners
+      3229,  # Speech therapy technicians
+      3231,  # Nursing auxiliaries/paramedics
+      3232,  # Non-university auxiliary midwives
+
+      # State bureaucrats & inspectors
+      3440,  # Public customs and tax administration agents
+      3441,  # Customs agents and border inspectors
+      3442,  # State treasury officials
+      3443,  # State social assistance and pension officials
+      3444,  # State licensing and permits officials
+      3449,  # State commercial establishment inspectors
+      3450,  # Police inspectors and detectives
+
+      # Social workers
+      2446,  # Professional social workers
+      3460   # Technical social workers and assistants
+    )
+  )
+
+# ------------------------------------------------------------------------------
+# Municipality level variables
+# ------------------------------------------------------------------------------
+
+prop_burocrata <- Chilenos_Censo_1987 %>%
+  group_by(Comuna_1987_Origen3) %>%
+  summarise(
+
+# Proportion of bureaucrats per municipality
+    prop_burocrata = as.numeric(mean(burocrata, na.rm = TRUE)),
+
+# Proportion of bureaucrats per rank per municipality,
+    prop_high = as.numeric(mean(burocrata & rango == "high", na.rm = TRUE)),
+    prop_mid  = as.numeric(mean(burocrata & rango == "mid",  na.rm = TRUE)),
+    prop_low  = as.numeric(mean(burocrata & rango == "low",  na.rm = TRUE)),
+    
+# Population per municipality
+    pop_1987  = n(),
+
+# Mean years of schooling per municipality
+    mean_years_pop = mean(years_schooling, na.rm = TRUE)
+  )
+
+# Joining the municipality level variables to the voting data databases 
+VotingData_Dataverse <- VotingData_Dataverse %>%
+  mutate(ID_2002_num = as.numeric(ID_2002)) %>%
+  left_join(prop_burocrata, by = c("ID_2002_num" = "Comuna_1987_Origen3")) %>%
+  select(-ID_2002_num) %>%
+
+# Rescaling variables for interpretation 
+  mutate(
+    sh_victims_total = (shvictimas_until74_70 + shvictimas_75_plus_70),
+        prop_burocrata = prop_burocrata * 100,
+        prop_high      = prop_high * 100,
+        prop_mid       = prop_mid  * 100,
+        prop_low       = prop_low  * 100) %>%
+
+# Share of ranks among bureaucrats per municipality 
+    mutate(share_high_among_buro = (prop_high / prop_burocrata) *100,
+    share_mid_among_buro  = (prop_mid  / prop_burocrata) *100)
+
+# ------------------------------------------------------------------------------
+```
+
+From here, I downloaded the clean data and did the analysis in the code for the paper. 
+

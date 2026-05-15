@@ -1,7 +1,10 @@
 ---
 title: "Code for final Quant 2."
+author: "Maria Zambrano Davila"
 format: html
 ---
+
+Code created with AI assistance. 
 
 ```{r, message = FALSE, warning = FALSE}
 library(dplyr)
@@ -22,10 +25,12 @@ library(scales)
 ```
 
 
-# Preparing the data 
+Data preparation
 
 ```{r}
 
+# ------------------------------------------------------------------------------
+# Downloading the data 
 # ------------------------------------------------------------------------------
 # CENSUS DATA 
 # ------------------------------------------------------------------------------
@@ -130,7 +135,6 @@ VotingData_Dataverse <- VotingData_Dataverse |>
 
 
 ```{r}
-
 # ------------------------------------------------------------------------------
 # Sanity check: Verify that ID_2002 codes from the shapefile 
 # match the codes in the 1992 census
@@ -156,8 +160,8 @@ Comunas_Censo_1992 |> filter(Codigo %in% sample_ids) |> select(Codigo, Nombre)
 # ------------------------------------------------------------------------------
 # Creating variables for analysis
 # ------------------------------------------------------------------------------
-
 # Years of schooling
+# ------------------------------------------------------------------------------
 
 Chilenos_Censo_1987 <- Chilenos_Censo_1987 %>%
   mutate(
@@ -250,20 +254,24 @@ Chilenos_Censo_1987 <- Chilenos_Censo_1987 %>%
   )
 
 # ------------------------------------------------------------------------------
-# MUNICIPALITY LEVEL VARIABLES  
+# Municipality level variables
 # ------------------------------------------------------------------------------
 
 prop_burocrata <- Chilenos_Censo_1987 %>%
   group_by(Comuna_1987_Origen3) %>%
   summarise(
+
 # Proportion of bureaucrats per municipality
     prop_burocrata = as.numeric(mean(burocrata, na.rm = TRUE)),
+
 # Proportion of bureaucrats per rank per municipality,
     prop_high = as.numeric(mean(burocrata & rango == "high", na.rm = TRUE)),
     prop_mid  = as.numeric(mean(burocrata & rango == "mid",  na.rm = TRUE)),
     prop_low  = as.numeric(mean(burocrata & rango == "low",  na.rm = TRUE)),
+    
 # Population per municipality
     pop_1987  = n(),
+
 # Mean years of schooling per municipality
     mean_years_pop = mean(years_schooling, na.rm = TRUE)
   )
@@ -273,13 +281,15 @@ VotingData_Dataverse <- VotingData_Dataverse %>%
   mutate(ID_2002_num = as.numeric(ID_2002)) %>%
   left_join(prop_burocrata, by = c("ID_2002_num" = "Comuna_1987_Origen3")) %>%
   select(-ID_2002_num) %>%
+
 # Rescaling variables for interpretation 
   mutate(
     sh_victims_total = (shvictimas_until74_70 + shvictimas_75_plus_70),
         prop_burocrata = prop_burocrata * 100,
         prop_high      = prop_high * 100,
         prop_mid       = prop_mid  * 100,
-        prop_low       = prop_low  * 100 %>%
+        prop_low       = prop_low  * 100) %>%
+
 # Share of ranks among bureaucrats per municipality 
     mutate(share_high_among_buro = (prop_high / prop_burocrata) *100,
     share_mid_among_buro  = (prop_mid  / prop_burocrata) *100)
@@ -287,15 +297,14 @@ VotingData_Dataverse <- VotingData_Dataverse %>%
 # ------------------------------------------------------------------------------
 ```
 
-# Analyses 
-
-Proportion of bureaucrats, no rank: 
+Analyses 
 
 ```{r}
-
-## -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# Proportion of bureaucrats, no rank: 
+# ------------------------------------------------------------------------------
 # REGRESSIONS 
-## -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 # Running the regressions 
 first_nocontrols <- lm_robust(data = VotingData_Dataverse, 
@@ -322,12 +331,10 @@ tidy_model <- function(model, model_name, keep_terms) {
 ```
 
 ```{r}
-
 # ------------------------------------------------------------------------------
 # GRAPH
 # ------------------------------------------------------------------------------
 
-# Controls, labels, order
 controls <- c("pop_1987", "lnDistRegCapital", "share_allende70", 
 "sh_victims_total", "mean_years_pop")
 
@@ -343,8 +350,6 @@ term_labels <- c(
 term_order_1 <- c("pop_1987", "mean_years_pop", "lnDistRegCapital", 
                "share_allende70", 
                   "sh_victims_total", "prop_burocrata")
-
-# Plot 1: prop_burocrata with all controls
 
 bind_rows(
   tidy_model(first_nocontrols, "No Controls",   "prop_burocrata"),
@@ -365,9 +370,11 @@ bind_rows(
 
 ```
 
-Rank share among bureaucrats per municipality: 
+
 
 ```{r}
+# ------------------------------------------------------------------------------
+# Rank share among bureaucrats per municipality: 
 # ------------------------------------------------------------------------------
 # REGRESSIONS 
 # ------------------------------------------------------------------------------
@@ -389,12 +396,10 @@ formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro +
 
 
 ```{r}
-
 # ------------------------------------------------------------------------------
 # GRAPH
 # ------------------------------------------------------------------------------
 
-# Updated controls and labels
 controls <- c("pop_1987", "lnDistRegCapital", "share_allende70", 
             "mean_years_pop", "sh_victims_total")
 
@@ -432,74 +437,8 @@ bind_rows(
 
 ```
 
-WITHOUT CONTROLLING FOR EDUCATION 
-
 ```{r}
-# ------------------------------------------------------------------------------
-# REGRESSIONS 
-# ------------------------------------------------------------------------------
-
-# Running the regressions
-second_nocontrols_noeducation <- lm_robust(data = VotingData_Dataverse, 
-formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro + 
-  factor(IDProv), 
-se_type = "CR2", clusters = IDProv, weights = pop_1987)
-
-second_noeducation <- lm_robust(data = VotingData_Dataverse, 
-formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro +
-   sh_victims_total + lnDistRegCapital + share_allende70 + pop_1987 + factor(IDProv), 
-  se_type = "CR2", clusters = IDProv, weights = pop_1987)
-
-
-```
-
-
-```{r}
-
-# ------------------------------------------------------------------------------
-# GRAPH
-# ------------------------------------------------------------------------------
-
-# Updated controls and labels
-controls <- c("pop_1987", "lnDistRegCapital", "share_allende70",
- "sh_victims_total")
-
-term_labels <- c(
-  "share_high_among_buro" = "High rank",
-  "share_mid_among_buro"  = "Mid rank",
-  "pop_1987"              = "Population 1987",
-  "lnDistRegCapital"      = "Ln distance to reg. cap.",
-  "share_allende70"       = "Allende vote share 1970",
-  "sh_victims_total" = "Total victims / Pop. 1970" 
-  )
-
-term_order <- c("pop_1987", "lnDistRegCapital", 
-"share_allende70", "sh_victims_total", "share_mid_among_buro", 
-"share_high_among_buro")
-
-bind_rows(
-  tidy_model(second_nocontrols_noeducation, "No Controls",   c("share_high_among_buro", 
-  "share_mid_among_buro")),
-  tidy_model(second_noeducation,            "With Controls", c("share_high_among_buro", 
-  "share_mid_among_buro", controls))
-) %>%
-  ggplot(aes(x = estimate, y = factor(term, levels = term_order), 
-  color = model)) +
-  geom_point(size = 3, position = position_dodge(width = 0.5)) +
-  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
-                 height = 0.2, position = position_dodge(width = 0.5)) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
-  scale_y_discrete(labels = term_labels) +
-  labs(title = "Bureaucrat Rank Composition vs Vote Share No, No Education Covariate",
-       x = "Estimate (95% CI)", y = NULL, color = NULL) +
-  theme_minimal() +
-  theme(legend.position = "bottom")
-
-```
-
-Trying with the proportion of ranks per the municipality's population: 
-
-```{r}
+# Proportion of ranks per the municipality's population: 
 # ------------------------------------------------------------------------------
 # REGRESSIONS 
 # ------------------------------------------------------------------------------
@@ -528,11 +467,12 @@ term_labels_prop <- c(
   "pop_1987"         = "Population 1987",
   "lnDistRegCapital" = "Ln distance to regional capital",
   "share_allende70"  = "Allende vote share 1970", 
+  "sh_victims_total" = "Total victims / Pop. 1970", 
   "mean_years_pop"   = "Mean years of schooling"
 )
 
 term_order_prop <- c("pop_1987", "mean_years_pop", "lnDistRegCapital", 
-                    "share_allende70", "prop_mid", 
+                    "share_allende70", "sh_victims_total", "prop_mid", 
                     "prop_high")
 
 bind_rows(
@@ -604,10 +544,11 @@ bind_rows(
 # ------------------------------------------------------------------------------
 ```
 
-Showing all results together: 
-```{r}
 
-# ── REGRESSION TABLE ──────────────────────────────────────────────────────────
+```{r}
+# ------------------------------------------------------------------------------
+# JOINT ESTIMATES
+# ------------------------------------------------------------------------------
 
 coef_map <- c(
   "prop_burocrata"        = "Bureaucrat share",
@@ -794,9 +735,11 @@ bind_rows(
 
 ```
 
+Appendix 
+
 
 ```{r}
-
+# Analysis, presidential elections 1989 
 # ------------------------------------------------------------------------------
 # REGRESSIONS 
 # ------------------------------------------------------------------------------
@@ -831,7 +774,6 @@ formula = share_aylwin89 ~ prop_high + prop_mid +
   se_type = "CR2", clusters = IDProv, weights = pop_1987)
 
 ```
-
 
 ```{r}
 # ------------------------------------------------------------------------------
@@ -883,8 +825,6 @@ bind_rows(
 
 ```
 
-
-Getting a sense of the data graphically 
 
 ```{r}
 
@@ -1043,200 +983,67 @@ datasummary(
 
 ```
 
-FOR THE PAPER: 
-
-
-
+WITHOUT CONTROLLING FOR EDUCATION 
 
 ```{r}
+# ------------------------------------------------------------------------------
+# REGRESSIONS 
+# ------------------------------------------------------------------------------
 
-# Distribution of years of schooling
-ggplot(processedchilenos, aes(x = years_schooling)) +
-  geom_histogram(bins = 20, fill = "steelblue", color = "white", alpha = 0.85) +
-  scale_x_continuous(breaks = seq(0, 20, by = 2)) +
-  labs(
-    title = "Distribution of Years of Schooling",
-    subtitle = "Chileans, 1987",
-    x = "Years of Schooling",
-    y = "Count"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    plot.title = element_text(face = "bold"),
-    panel.grid.minor = element_blank()
-  )
+# Running the regressions
+second_nocontrols_noeducation <- lm_robust(data = VotingData_Dataverse, 
+formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro + 
+  factor(IDProv), 
+se_type = "CR2", clusters = IDProv, weights = pop_1987)
+
+second_noeducation <- lm_robust(data = VotingData_Dataverse, 
+formula = VoteShareNo ~ share_high_among_buro + share_mid_among_buro +
+   sh_victims_total + lnDistRegCapital + share_allende70 + pop_1987 + factor(IDProv), 
+  se_type = "CR2", clusters = IDProv, weights = pop_1987)
+
 
 ```
 
 
 ```{r}
 
+# ------------------------------------------------------------------------------
+# GRAPH
+# ------------------------------------------------------------------------------
 
+# Updated controls and labels
+controls <- c("pop_1987", "lnDistRegCapital", "share_allende70",
+ "sh_victims_total")
 
-prop_burocrata <- processedchilenos %>%
-  group_by(Comuna_1987_Origen3) %>%
-  summarise(
-# Proportion of bureaucrats per municipality
-    prop_burocrata = as.numeric(mean(burocrata, na.rm = TRUE)),
-# Proportion of bureaucrats per rank per municipality,
-    prop_high = as.numeric(mean(burocrata & rango == "high", na.rm = TRUE)),
-    prop_mid  = as.numeric(mean(burocrata & rango == "mid",  na.rm = TRUE)),
-    prop_low  = as.numeric(mean(burocrata & rango == "low",  na.rm = TRUE)),
-# Population per municipality
-    pop_1987  = n(),
-# Mean years of schooling per municipality
-    mean_years_pop = mean(years_schooling, na.rm = TRUE)
+term_labels <- c(
+  "share_high_among_buro" = "High rank",
+  "share_mid_among_buro"  = "Mid rank",
+  "pop_1987"              = "Population 1987",
+  "lnDistRegCapital"      = "Ln distance to reg. cap.",
+  "share_allende70"       = "Allende vote share 1970",
+  "sh_victims_total" = "Total victims / Pop. 1970" 
   )
 
-# Distribution of prop_burocrata across municipalities
-ggplot(prop_burocrata, aes(x = prop_burocrata)) +
-  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
-  labs(title = "Distribution of Bureaucrat Share Across Municipalities",
-       x = "Proportion of Bureaucrats", y = "Count") +
-  theme_minimal()
+term_order <- c("pop_1987", "lnDistRegCapital", 
+"share_allende70", "sh_victims_total", "share_mid_among_buro", 
+"share_high_among_buro")
 
-# Distribution of prop_high/mid/low across municipalities
-prop_rango_long <- prop_burocrata %>%
-  pivot_longer(cols = c(prop_high, prop_mid, prop_low),
-               names_to = "rango", values_to = "proportion") %>%
-  mutate(rango = factor(recode(rango,
-                        prop_high = "High (13+ years)",
-                        prop_mid  = "Mid (9-12 years)",
-                        prop_low  = "Low (≤8 years)"),
-                        levels = c("Low (≤8 years)", "Mid (9-12 years)", 
-                                   "High (13+ years)")))                                  
-
-ggplot(prop_rango_long, aes(x = proportion, fill = rango)) +
-  geom_histogram(bins = 30, color = "white", alpha = 0.85) +
-  facet_wrap(~rango) +
-  labs(title = "Distribution of Bureaucrat Share by Education Level",
-       x = "Proportion", y = "Count") +
-  theme_minimal(base_size = 13) +
-  theme(
-    legend.position = "none",
-    plot.title = element_text(face = "bold"),
-    panel.grid.minor = element_blank()
-  )
-
-```
-
-
-```{r}
-
-# Average proportion by rank across all municipalities
-prop_rango_long %>%
-  group_by(rango) %>%
-  summarise(mean_prop = mean(proportion, na.rm = TRUE)) %>%
-  ggplot(aes(x = rango, y = mean_prop, fill = rango)) +
-  geom_col(color = "white") +
-  labs(title = "Average Bureaucrat Share by Education Level",
-       x = "Education Level", y = "Mean Proportion") +
+bind_rows(
+  tidy_model(second_nocontrols_noeducation, "No Controls",   c("share_high_among_buro", 
+  "share_mid_among_buro")),
+  tidy_model(second_noeducation,            "With Controls", c("share_high_among_buro", 
+  "share_mid_among_buro", controls))
+) %>%
+  ggplot(aes(x = estimate, y = factor(term, levels = term_order), 
+  color = model)) +
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.2, position = position_dodge(width = 0.5)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  scale_y_discrete(labels = term_labels) +
+  labs(title = "Bureaucrat Rank Composition vs Vote Share No, No Education Covariate",
+       x = "Estimate (95% CI)", y = NULL, color = NULL) +
   theme_minimal() +
-  theme(legend.position = "none")
+  theme(legend.position = "bottom")
 
 ```
-
-
-```{r}
-#| label: fig-burocrata-quadratic
-#| fig-cap: "Bureaucrat share vs opposition vote share with quadratic fit."
-#| fig-width: 6
-#| fig-height: 4
-#| warning: false
-#| message: false
-
-# Bureaucrat share vs Vote Share No
-ggplot(processeddata, aes(x = prop_burocrata, y = VoteShareNo)) +
-  geom_point(alpha = 0.5, color = "steelblue") +
-  geom_smooth(color = "red", method = "lm", se = TRUE, alpha = 0.1) +
-  labs(title = "Bureaucrat Share vs No Vote Share (1988)",
-       x = "Proportion of Bureaucrats", y = "Vote Share No") +
-  theme_minimal()
-
-```
-
-
-```{r}
-
-
-# Looking at variation of rank among municipalities
-max_prop <- prop_burocrata %>%
-  summarise(max(prop_high, prop_mid, prop_low, na.rm = TRUE)) %>%
-  pull()
-
-prop_burocrata %>%
-  pivot_longer(cols = c(prop_high, prop_mid, prop_low),
-               names_to = "rango", values_to = "proportion") %>%
-  mutate(rango = recode(rango,
-                        prop_high = "High Rank",
-                        prop_mid  = "Mid Rank",
-                        prop_low  = "Low Rank")) %>%
-  ggplot(aes(x = reorder(as.character(Comuna_1987_Origen3), proportion), 
-             y = proportion, color = rango)) +
-  geom_point(size = 0.8, alpha = 0.6) +
-  facet_wrap(~rango) +
-  ylim(0, max_prop) +
-  labs(title = "Bureaucrat Rank Share by Municipality",
-       x = NULL, y = "Proportion") +
-  theme_minimal() +
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        legend.position = "none")
-
-```
-
-
-```{r}
-
-
-# Education has a quadratic relationship with opposition voting 
-
-quad_model <- lm(VoteShareNo ~ mean_years_pop + I(mean_years_pop^2), 
-data = processeddata)
-coefs <- coef(quad_model)
-turning_point <- -coefs["mean_years_pop"] / (2 * coefs["I(mean_years_pop^2)"])
-
-ggplot(processeddata, aes(x = mean_years_pop, y = VoteShareNo)) +
-  geom_point(alpha = 0.5, color = "steelblue") +
-  geom_smooth(method = "lm", formula = y ~ x + I(x^2),
-              color = "red", se = TRUE) +
-  geom_vline(xintercept = turning_point, linetype = "dashed", color = "black") +
-  annotate("text", x = turning_point + 0.15,
-           y = max(processeddata$VoteShareNo, na.rm = TRUE) * 0.95,
-           label = paste0("Peak: ", round(turning_point, 2), " years"),
-           hjust = 0, size = 3.5) +
-  labs(title = "Education vs Vote Share No — Quadratic Fit",
-       x = "Mean Years of Schooling",
-       y = "Vote Share No") +
-  theme_minimal(base_size = 13) +
-  theme(plot.title = element_text(face = "bold"))
-```
-
-
-```{r}
-
-# Summary statistics 
-
-processeddata %>%
-  select(VoteShareNo, prop_burocrata, share_high_among_buro, 
-  share_mid_among_buro, prop_high, prop_mid, sh_victims_total, lnDistRegCapital, share_allende70, pop_1987, mean_years_pop) %>%
-  summary()
-
-datasummary(
-  (`No vote share` = VoteShareNo) +
-  (`Allende vote share 1970` = share_allende70) +
-  (`Proportion of bureaucrats` = prop_burocrata) +
-  (`High rank bureaucrats` = prop_high) +
-  (`Mid rank bureaucrats ` = prop_mid) +
-  (`High rank share among bureaucrats` = share_high_among_buro) +
-  (`Mid rank share among bureaucrats` = share_mid_among_buro) +
-  (`Total victims / Pop. 1970` = sh_victims_total) +
-  (`Ln distance to regional capital` = lnDistRegCapital) +
-  (`Population 1987` = pop_1987) +
-  (`Mean years of schooling per municipality` = mean_years_pop) ~
-  Mean + SD + Min + Max + N,
-  data = processeddata
-)
-
-```
-
